@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - Note.Lab</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/login.css">
+    <link rel="icon" type="image/png" href="assets/Image/Logo.png">
+</head>
+<body class="login-body">
+    <div class="login-container">
+        <!-- Login Card -->
+        <div class="login-card">
+            <!-- Header -->
+            <div class="login-header">
+                <div class="logo-section">
+                    <img src="assets/Image/Logo.png" alt="Note.Lab Logo" class="logo-image">
+                    <h1 class="app-title">Note.Lab</h1>
+                </div>
+                <p class="login-subtitle">Developer-focused note-taking platform</p>
+            </div>
+            
+            <!-- Login Form -->
+            <div class="login-form-container">
+                <!-- Tab Navigation -->
+                <div class="auth-tabs">
+                    <button class="auth-tab active" data-mode="signin">Sign In</button>
+                    <button class="auth-tab" data-mode="signup">Sign Up</button>
+                </div>
+                
+                <!-- Messages -->
+                <div id="messageContainer" class="message-container"></div>
+                
+                <!-- Auth Form -->
+                <form id="authForm" class="auth-form">
+                    <!-- Name field (only for signup) -->
+                    <div class="form-group" id="nameGroup" style="display: none;">
+                        <label for="fullName">Full Name</label>
+                        <input 
+                            type="text" 
+                            id="fullName" 
+                            name="fullName"
+                            placeholder="Enter your full name"
+                            autocomplete="name"
+                        >
+                    </div>
+                    
+                    <!-- Email field -->
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            name="email"
+                            placeholder="Enter your email"
+                            required
+                            autocomplete="email"
+                        >
+                    </div>
+                    
+                    <!-- Password field -->
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <div class="password-input">
+                            <input 
+                                type="password" 
+                                id="password" 
+                                name="password"
+                                placeholder="Enter your password"
+                                required
+                                autocomplete="current-password"
+                            >
+                            <button type="button" class="password-toggle" id="passwordToggle">
+                                <svg class="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Confirm Password field (only for signup) -->
+                    <div class="form-group" id="confirmPasswordGroup" style="display: none;">
+                        <label for="confirmPassword">Confirm Password</label>
+                        <input 
+                            type="password" 
+                            id="confirmPassword" 
+                            name="confirmPassword"
+                            placeholder="Confirm your password"
+                            autocomplete="new-password"
+                        >
+                    </div>
+                    
+                    <!-- Remember me (only for signin) -->
+                    <div class="form-options" id="rememberGroup">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="rememberMe">
+                            <span class="checkmark"></span>
+                            Remember me
+                        </label>
+                        <a href="#" class="forgot-link">Forgot password?</a>
+                    </div>
+                    
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn-primary btn-full" id="submitBtn">
+                        <span class="btn-text">Sign In</span>
+                        <span class="btn-loading" style="display: none;">
+                            <svg class="spinner" width="20" height="20" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" 
+                                        stroke-dasharray="31.416" stroke-dashoffset="31.416">
+                                    <animate attributeName="stroke-dasharray" dur="2s" 
+                                             values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/>
+                                    <animate attributeName="stroke-dashoffset" dur="2s" 
+                                             values="0;-15.708;-31.416" repeatCount="indefinite"/>
+                                </circle>
+                            </svg>
+                            <span class="loading-text">Signing in...</span>
+                        </span>
+                    </button>
+                </form>
+                
+                <!-- Demo Account Info -->
+                <div class="demo-section">
+                    <div class="divider">
+                        <span class="divider-text">or</span>
+                    </div>
+                    <button type="button" class="btn-demo" id="demoBtn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        Try Demo Account
+                    </button>
+                    <p class="demo-info">
+                        Demo credentials: <strong>demo@notelab.dev</strong> / <strong>demo123</strong>
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div class="login-footer">
+                <p>&copy; 2024 Note.Lab. Built for developers, by developers.</p>
+                <div class="footer-links">
+                    <a href="#" class="footer-link">Privacy Policy</a>
+                    <a href="#" class="footer-link">Terms of Service</a>
+                    <a href="#" class="footer-link">GitHub</a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Background Elements -->
+        <div class="background-pattern"></div>
+        <div class="floating-shapes">
+            <div class="shape shape-1"></div>
+            <div class="shape shape-2"></div>
+            <div class="shape shape-3"></div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="js/login.js"></script>
+</body>
+</html>

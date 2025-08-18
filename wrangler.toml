@@ -1,0 +1,23 @@
+name = "note-lab"
+main = "backend/src/index.js"
+compatibility_date = "2023-12-01"
+
+[env.production]
+name = "note-lab-prod"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "note-lab-db"
+database_id = ""
+
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = ""
+preview_id = ""
+
+[[r2_buckets]]
+binding = "ATTACHMENTS"
+bucket_name = "note-lab-attachments"
+
+[vars]
+ENVIRONMENT = "development"

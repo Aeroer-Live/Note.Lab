@@ -1,0 +1,22 @@
+{
+  "name": "note-lab",
+  "version": "1.0.0",
+  "description": "A cloud-based note-taking system for developers",
+  "main": "index.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "npm run build:frontend",
+    "build:frontend": "mkdir -p dist && cp -r frontend/* dist/",
+    "serve": "python3 -m http.server 8000 --directory frontend"
+  },
+  "keywords": ["notes", "developer", "markdown", "cloudflare"],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  },
+  "dependencies": {
+    "@cloudflare/workers-types": "^4.0.0"
+  }
+}

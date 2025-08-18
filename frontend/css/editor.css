@@ -1,0 +1,335 @@
+/* Note Editor Styles */
+.note-editor {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background-color: var(--bg-primary);
+}
+
+/* Editor Header */
+.editor-header {
+    padding: var(--space-4);
+    border-bottom: 1px solid var(--border-default);
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    background-color: var(--bg-secondary);
+}
+
+.note-title {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 18px;
+    font-weight: 600;
+    padding: var(--space-2);
+    border-radius: var(--radius-md);
+    transition: background-color 0.2s;
+}
+
+.note-title:focus {
+    outline: none;
+    background-color: var(--bg-tertiary);
+}
+
+.note-title::placeholder {
+    color: var(--text-muted);
+}
+
+.editor-actions {
+    display: flex;
+    gap: var(--space-2);
+}
+
+/* Editor Toolbar */
+.editor-toolbar {
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--border-default);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--bg-secondary);
+}
+
+.toolbar-left {
+    display: flex;
+    gap: var(--space-1);
+}
+
+.toolbar-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    padding: var(--space-2);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
+    min-width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toolbar-btn:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.toolbar-btn.active {
+    background-color: var(--accent-secondary);
+    color: white;
+}
+
+.toolbar-right {
+    display: flex;
+    gap: var(--space-4);
+    align-items: center;
+}
+
+.word-count {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+
+.save-status {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.save-status.saving {
+    color: var(--accent-secondary);
+}
+
+.save-status.saved {
+    color: var(--accent-primary);
+}
+
+.save-status.error {
+    color: var(--accent-danger);
+}
+
+/* Editor Container */
+.editor-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+#codeEditor {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    line-height: 1.6;
+    padding: var(--space-4);
+    resize: none;
+    outline: none;
+}
+
+#codeEditor::placeholder {
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+/* CodeMirror Overrides */
+.CodeMirror {
+    height: 100% !important;
+    font-family: var(--font-mono) !important;
+    font-size: 14px !important;
+    line-height: 1.6 !important;
+    background-color: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+}
+
+.CodeMirror-focused .CodeMirror-cursor {
+    border-left: 2px solid var(--accent-secondary) !important;
+}
+
+.CodeMirror-selected {
+    background-color: var(--bg-hover) !important;
+}
+
+.CodeMirror-line::selection,
+.CodeMirror-line > span::selection,
+.CodeMirror-line > span > span::selection {
+    background-color: var(--bg-hover) !important;
+}
+
+.CodeMirror-gutters {
+    background-color: var(--bg-secondary) !important;
+    border-right: 1px solid var(--border-default) !important;
+}
+
+.CodeMirror-linenumber {
+    color: var(--text-muted) !important;
+    font-family: var(--font-mono) !important;
+}
+
+.CodeMirror-activeline-background {
+    background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+/* Markdown Syntax Highlighting */
+.cm-header {
+    color: #79c0ff !important;
+    font-weight: 600 !important;
+}
+
+.cm-quote {
+    color: var(--text-secondary) !important;
+    font-style: italic !important;
+}
+
+.cm-link {
+    color: #58a6ff !important;
+    text-decoration: underline !important;
+}
+
+.cm-url {
+    color: #a5a5a5 !important;
+}
+
+.cm-strong {
+    color: var(--text-primary) !important;
+    font-weight: 600 !important;
+}
+
+.cm-em {
+    color: var(--text-primary) !important;
+    font-style: italic !important;
+}
+
+.cm-comment {
+    color: #8b949e !important;
+    background-color: var(--bg-tertiary) !important;
+    padding: 2px 4px !important;
+    border-radius: var(--radius-sm) !important;
+    font-family: var(--font-mono) !important;
+}
+
+.cm-string {
+    color: #a5c261 !important;
+}
+
+.cm-number {
+    color: #d19a66 !important;
+}
+
+.cm-keyword {
+    color: #c678dd !important;
+}
+
+.cm-def {
+    color: #61dafb !important;
+}
+
+.cm-variable {
+    color: #e06c75 !important;
+}
+
+.cm-tag {
+    color: #e06c75 !important;
+}
+
+.cm-attribute {
+    color: #d19a66 !important;
+}
+
+/* Code Block Styling */
+.cm-meta {
+    color: var(--text-muted) !important;
+}
+
+/* List styling */
+.cm-formatting-list {
+    color: #79c0ff !important;
+    font-weight: 600 !important;
+}
+
+/* Task list styling */
+.cm-formatting-task {
+    color: #79c0ff !important;
+}
+
+/* Horizontal rule */
+.cm-hr {
+    color: var(--border-default) !important;
+}
+
+/* Focus mode - dimmed lines */
+.CodeMirror-unfocused-line {
+    opacity: 0.6 !important;
+    transition: opacity 0.2s !important;
+}
+
+/* Editor loading state */
+.editor-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--text-muted);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .editor-header {
+        padding: var(--space-3);
+        flex-wrap: wrap;
+        gap: var(--space-2);
+    }
+    
+    .note-title {
+        font-size: 16px;
+    }
+    
+    .editor-toolbar {
+        padding: var(--space-2) var(--space-3);
+        flex-wrap: wrap;
+    }
+    
+    .toolbar-left {
+        order: 2;
+    }
+    
+    .toolbar-right {
+        order: 1;
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    #codeEditor,
+    .CodeMirror {
+        padding: var(--space-3) !important;
+        font-size: 13px !important;
+    }
+}
+
+/* Print styles */
+@media print {
+    .editor-header,
+    .editor-toolbar,
+    .sidebar {
+        display: none !important;
+    }
+    
+    .note-editor {
+        background: white !important;
+        color: black !important;
+    }
+    
+    .CodeMirror {
+        background: white !important;
+        color: black !important;
+    }
+}
