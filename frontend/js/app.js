@@ -62,8 +62,16 @@ class NoteApp {
             this.createNewNote();
         });
         
-        // Create first note button
-        document.getElementById('createFirstNote').addEventListener('click', () => {
+        // Template selection
+        document.querySelectorAll('.template-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const template = card.dataset.template;
+                this.createNoteFromTemplate(template);
+            });
+        });
+
+        // Create blank note
+        document.getElementById('createBlankNote').addEventListener('click', () => {
             this.createNewNote();
         });
         
@@ -71,6 +79,9 @@ class NoteApp {
         document.getElementById('searchInput').addEventListener('input', (e) => {
             this.searchNotes(e.target.value);
         });
+
+        // Category header collapse/expand
+        this.bindCategoryEvents();
         
         // Note title
         document.getElementById('noteTitle').addEventListener('input', (e) => {
@@ -94,6 +105,9 @@ class NoteApp {
         document.getElementById('logoutBtn').addEventListener('click', () => {
             this.logout();
         });
+
+        // Mobile menu handling
+        this.bindMobileEvents();
         
         // Auto-save timer
         this.autoSaveTimer = null;
@@ -135,12 +149,71 @@ class NoteApp {
             document.getElementById('noteTitle').select();
         }, 100);
     }
+
+    createNoteFromTemplate(templateType) {
+        const templates = this.getTemplateContent();
+        const template = templates[templateType] || templates.blank;
+        
+        const note = {
+            id: this.generateId(),
+            title: template.title,
+            content: template.content,
+            type: templateType,
+            starred: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            tags: template.tags || []
+        };
+        
+        this.notes.unshift(note);
+        this.selectNote(note);
+        this.displayNotes();
+        this.saveNotes();
+        
+        // Focus on title for easy editing
+        setTimeout(() => {
+            document.getElementById('noteTitle').focus();
+            document.getElementById('noteTitle').select();
+        }, 100);
+    }
+
+    getTemplateContent() {
+        return {
+            plan: {
+                title: 'Untitled note',
+                tags: ['planning'],
+                content: ''
+            },
+            code: {
+                title: 'Untitled note',
+                tags: ['code'],
+                content: ''
+            },
+            credentials: {
+                title: 'Untitled note',
+                tags: ['secure', 'credentials'],
+                content: ''
+            },
+
+            blank: {
+                title: 'Untitled note',
+                tags: [],
+                content: ''
+            }
+        };
+    }
     
     selectNote(note) {
         this.currentNote = note;
         this.showEditor();
         this.updateNoteEditor();
         this.updateActiveNoteInList();
+        this.updateMobileTitle();
+        
+        // Set template-specific behavior
+        if (window.templateManager && note.type) {
+            window.templateManager.setNoteType(note.type);
+        }
     }
     
     updateNoteEditor() {
@@ -171,6 +244,11 @@ class NoteApp {
             window.editor.setValue(this.currentNote.content);
         } else {
             document.getElementById('codeEditor').value = this.currentNote.content;
+        }
+        
+        // Update preview if editor is available
+        if (window.noteEditor) {
+            window.noteEditor.updatePreview();
         }
         
         this.updateWordCount();
@@ -256,42 +334,80 @@ class NoteApp {
             // 'all' shows everything
         }
         
-        this.displayFilteredNotes(notesToShow);
+        this.displayNotesByCategory(notesToShow);
     }
     
-    displayFilteredNotes(notes) {
-        const notesList = document.getElementById('notesList');
-        
+    displayNotesByCategory(notes) {
+        // Group notes by category
+        const categorizedNotes = {
+            plan: notes.filter(note => note.type === 'plan'),
+            code: notes.filter(note => note.type === 'code'),
+            credentials: notes.filter(note => note.type === 'credentials'),
+            other: notes.filter(note => !note.type || !['plan', 'code', 'credentials'].includes(note.type))
+        };
+
+        // Update each category section
+        this.updateCategorySection('plan', categorizedNotes.plan);
+        this.updateCategorySection('code', categorizedNotes.code);
+        this.updateCategorySection('credentials', categorizedNotes.credentials);
+        this.updateCategorySection('other', categorizedNotes.other);
+    }
+
+    updateCategorySection(category, notes) {
+        const categoryMapping = {
+            plan: { listId: 'planNotesList', countId: 'planNotesCount', sectionId: 'planNotesSection' },
+            code: { listId: 'codeNotesList', countId: 'codeNotesCount', sectionId: 'codeNotesSection' },
+            credentials: { listId: 'credentialsNotesList', countId: 'credentialsNotesCount', sectionId: 'credentialsNotesSection' },
+            other: { listId: 'otherNotesList', countId: 'otherNotesCount', sectionId: 'otherNotesSection' }
+        };
+
+        const mapping = categoryMapping[category];
+        const notesList = document.getElementById(mapping.listId);
+        const countElement = document.getElementById(mapping.countId);
+        const sectionElement = document.getElementById(mapping.sectionId);
+
+        // Update count
+        countElement.textContent = notes.length;
+
+        // Update section visibility and state
         if (notes.length === 0) {
+            sectionElement.classList.add('empty');
             notesList.innerHTML = `
-                <div class="empty-state" style="padding: var(--space-4); text-align: center; color: var(--text-muted);">
-                    <p>No notes found</p>
+                <div class="empty-category" style="padding: var(--space-3); text-align: center; color: var(--text-muted); font-size: 13px;">
+                    No notes yet
                 </div>
             `;
-            return;
-        }
-        
-        notesList.innerHTML = notes.map(note => `
-            <div class="note-item" data-note-id="${note.id}">
-                <div class="note-item-title">${this.escapeHtml(note.title)}</div>
-                <div class="note-item-preview">${this.escapeHtml(this.getPreviewText(note.content))}</div>
-                <div class="note-item-meta">
-                    <span class="note-item-time">${this.formatTime(note.updatedAt)}</span>
-                    ${note.starred ? '<span class="note-starred">★</span>' : ''}
+        } else {
+            sectionElement.classList.remove('empty');
+            
+            // Generate notes HTML
+            notesList.innerHTML = notes.map(note => `
+                <div class="note-item" data-note-id="${note.id}">
+                    <div class="note-item-title">${this.escapeHtml(note.title)}</div>
+                    <div class="note-item-preview">${this.escapeHtml(this.getPreviewText(note.content))}</div>
+                    <div class="note-item-meta">
+                        <span class="note-item-time">${this.formatTime(note.updatedAt)}</span>
+                        ${note.starred ? '<span class="note-starred">★</span>' : ''}
+                    </div>
                 </div>
-            </div>
-        `).join('');
-        
-        // Bind click events
-        notesList.querySelectorAll('.note-item').forEach(item => {
-            item.addEventListener('click', () => {
-                const noteId = item.dataset.noteId;
-                const note = this.notes.find(n => n.id === noteId);
-                if (note) {
-                    this.selectNote(note);
-                }
+            `).join('');
+
+            // Bind click events for this category
+            notesList.querySelectorAll('.note-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const noteId = item.dataset.noteId;
+                    const note = this.notes.find(n => n.id === noteId);
+                    if (note) {
+                        this.selectNote(note);
+                    }
+                });
             });
-        });
+        }
+    }
+
+    displayFilteredNotes(notes) {
+        // For search results, use the category-based display
+        this.displayNotesByCategory(notes);
     }
     
     getPreviewText(content) {
@@ -410,6 +526,72 @@ class NoteApp {
         
         // Redirect to login page
         window.location.href = '../login.html';
+    }
+
+    bindMobileEvents() {
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const mobileOverlay = document.getElementById('mobileOverlay');
+
+        // Mobile menu toggle
+        if (mobileMenuBtn) {
+            mobileMenuBtn.addEventListener('click', () => {
+                this.toggleMobileMenu();
+            });
+        }
+
+        // Close menu when clicking overlay
+        if (mobileOverlay) {
+            mobileOverlay.addEventListener('click', () => {
+                this.closeMobileMenu();
+            });
+        }
+
+        // Close menu when clicking a nav item (mobile)
+        document.querySelectorAll('.nav-item a').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    this.closeMobileMenu();
+                }
+            });
+        });
+
+        // Update mobile title when note changes
+        this.updateMobileTitle();
+    }
+
+    toggleMobileMenu() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('mobileOverlay');
+        
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('show');
+    }
+
+    closeMobileMenu() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('mobileOverlay');
+        
+        sidebar.classList.remove('open');
+        overlay.classList.remove('show');
+    }
+
+    updateMobileTitle() {
+        const mobileTitle = document.getElementById('mobileTitle');
+        if (mobileTitle && this.currentNote) {
+            mobileTitle.textContent = this.currentNote.title || 'Untitled note';
+        } else if (mobileTitle) {
+            mobileTitle.textContent = 'Note.Lab';
+        }
+    }
+
+    bindCategoryEvents() {
+        // Add click events to category headers for collapse/expand
+        document.querySelectorAll('.category-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const category = header.closest('.notes-category');
+                category.classList.toggle('collapsed');
+            });
+        });
     }
 }
 

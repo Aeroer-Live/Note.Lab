@@ -5,17 +5,17 @@ class NoteEditor {
         this.previewMode = false;
         this.splitView = false;
         this.resizing = false;
+        this.currentNoteType = null;
+        this.previewEventListeners = [];
         this.init();
     }
     
     init() {
-        // Initialize CodeMirror after DOM is loaded
-        document.addEventListener('DOMContentLoaded', () => {
-            this.initializeEditor();
-            this.bindToolbarEvents();
-            this.bindPreviewEvents();
-            this.setupResizeHandle();
-        });
+        // Initialize CodeMirror components
+        this.initializeEditor();
+        this.bindToolbarEvents();
+        this.bindPreviewEvents();
+        this.setupResizeHandle();
     }
     
     initializeEditor() {
@@ -50,11 +50,12 @@ class NoteEditor {
                     }
                 }
             },
-            placeholder: "Start writing your note... \n\n# Your Note Title\n\nWrite your thoughts, code snippets, and ideas here.\n\n## Code Example\n```javascript\nconsole.log('Hello, Note.Lab!');\n```\n\n- Use markdown for formatting\n- Add code blocks with syntax highlighting\n- Organize with headers and lists"
+            placeholder: ""
         });
         
         // Store reference globally for app.js
         window.editor = this.editor;
+        window.noteEditor = this;
         
         // Bind editor events
         this.editor.on('change', () => {
@@ -65,10 +66,11 @@ class NoteEditor {
             this.updateWordCount();
         });
         
-        // Auto-focus editor
+        // Auto-focus editor and initialize preview
         setTimeout(() => {
             this.editor.refresh();
             this.editor.focus();
+            this.updatePreview(); // Initialize preview on load
         }, 100);
     }
     
@@ -122,10 +124,38 @@ class NoteEditor {
     }
 
     bindPreviewEvents() {
-        const previewToggle = document.getElementById('previewToggle');
-        previewToggle.addEventListener('click', () => {
-            this.togglePreview();
+        // Remove existing event listeners first
+        if (this.previewEventListeners) {
+            this.previewEventListeners.forEach(({ element, listener }) => {
+                element.removeEventListener('click', listener);
+            });
+        }
+        this.previewEventListeners = [];
+        
+        // Handle all preview toggle buttons (in all toolbars)
+        const previewButtons = document.querySelectorAll('.preview-toggle');
+        console.log('Found preview buttons:', previewButtons.length);
+        
+        previewButtons.forEach((button, index) => {
+            console.log(`Binding preview button ${index}:`, button);
+            const listener = (e) => {
+                e.preventDefault();
+                console.log('Preview button clicked!');
+                this.togglePreview();
+            };
+            button.addEventListener('click', listener);
+            
+            // Store the listener for cleanup
+            this.previewEventListeners.push({ element: button, listener });
         });
+
+        // Handle mobile preview close button
+        const previewCloseBtn = document.getElementById('previewCloseBtn');
+        if (previewCloseBtn) {
+            previewCloseBtn.addEventListener('click', () => {
+                this.togglePreview();
+            });
+        }
     }
 
     setupResizeHandle() {
@@ -207,21 +237,47 @@ class NoteEditor {
             case 'hr':
                 this.formatText('hr');
                 break;
+            case 'paragraph':
+                this.formatText('paragraph');
+                break;
         }
     }
 
     togglePreview() {
+        console.log('togglePreview called!');
         const previewPane = document.getElementById('previewPane');
         const resizeHandle = document.getElementById('resizeHandle');
         const editorPanes = document.querySelector('.editor-panes');
-        const previewToggle = document.getElementById('previewToggle');
+        const previewToggle = document.querySelector('.preview-toggle');
+        const previewHeader = document.querySelector('.preview-header');
+        const isMobile = window.innerWidth <= 768;
+        
+        console.log('Preview elements found:', {
+            previewPane: !!previewPane,
+            resizeHandle: !!resizeHandle,
+            editorPanes: !!editorPanes,
+            previewToggle: !!previewToggle,
+            previewHeader: !!previewHeader,
+            currentPreviewMode: this.previewMode
+        });
 
         if (!this.previewMode) {
             // Show preview
             previewPane.style.display = 'flex';
-            resizeHandle.style.display = 'block';
+            if (!isMobile) {
+                resizeHandle.style.display = 'block';
+            }
             editorPanes.classList.add('split-view');
-            previewToggle.classList.add('active');
+            // Update all preview toggle buttons
+            document.querySelectorAll('.preview-toggle').forEach(btn => {
+                btn.classList.add('active');
+            });
+            
+            // Show mobile preview header on mobile
+            if (isMobile && previewHeader) {
+                previewHeader.style.display = 'flex';
+            }
+            
             this.previewMode = true;
             this.updatePreview();
         } else {
@@ -229,7 +285,16 @@ class NoteEditor {
             previewPane.style.display = 'none';
             resizeHandle.style.display = 'none';
             editorPanes.classList.remove('split-view');
-            previewToggle.classList.remove('active');
+            // Update all preview toggle buttons
+            document.querySelectorAll('.preview-toggle').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Hide mobile preview header
+            if (previewHeader) {
+                previewHeader.style.display = 'none';
+            }
+            
             this.previewMode = false;
         }
 
@@ -242,10 +307,13 @@ class NoteEditor {
     }
 
     updatePreview() {
-        if (!this.previewMode || !window.marked) return;
+        if (!window.marked) return;
 
         const content = this.editor ? this.editor.getValue() : '';
         const previewContent = document.getElementById('previewContent');
+        
+        // Only update if preview content exists (preview pane is in DOM)
+        if (!previewContent) return;
         
         if (content.trim() === '') {
             previewContent.innerHTML = `
@@ -391,6 +459,15 @@ class NoteEditor {
             case 'hr':
                 replacement = '\n---\n';
                 lineMode = true;
+                break;
+                
+            case 'paragraph':
+                if (selection) {
+                    replacement = `<p>${selection}</p>`;
+                } else {
+                    replacement = '<p>Your paragraph text here</p>';
+                    cursorOffset = 3; // Position after <p>
+                }
                 break;
         }
         
@@ -553,5 +630,7 @@ class EditorUtils {
     }
 }
 
-// Initialize editor
-window.noteEditor = new NoteEditor();
+// Initialize editor when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    window.noteEditor = new NoteEditor();
+});

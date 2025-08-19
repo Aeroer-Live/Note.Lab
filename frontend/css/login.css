@@ -7,7 +7,7 @@
     min-height: 100vh;
     min-height: 100dvh; /* Better mobile support */
     background: var(--bg-primary);
-    font-family: var(--font-system);
+    font-family: var(--font-ui);
     overflow-x: hidden;
     overflow-y: auto;
 }
@@ -245,7 +245,7 @@
     border-radius: var(--radius-md);
     font-size: clamp(14px, 3vw, 16px);
     transition: all 0.2s ease;
-    font-family: var(--font-system);
+    font-family: var(--font-ui);
     width: 100%;
     box-sizing: border-box;
 }

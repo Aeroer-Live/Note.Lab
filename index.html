@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <title>Note.Lab - Developer Notes</title>
     <link rel="stylesheet" href="frontend/css/main.css">
     <link rel="stylesheet" href="frontend/css/editor.css">
@@ -13,8 +13,11 @@
 </head>
 <body>
     <div class="app-container">
+        <!-- Mobile Overlay -->
+        <div class="mobile-overlay" id="mobileOverlay"></div>
+        
         <!-- Sidebar Navigation -->
-        <nav class="sidebar">
+        <nav class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
                     <img src="frontend/assets/Image/Logo.png" alt="Note.Lab Logo" class="logo-image-small">
@@ -49,20 +52,54 @@
                             Starred
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a href="#" data-view="recent">
-                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
-                                <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
-                            </svg>
-                            Recent
-                        </a>
-                    </li>
                 </ul>
             </div>
             
             <div class="sidebar-notes" id="notesList">
-                <!-- Notes list will be populated here -->
+                <!-- Category Sections -->
+                <div class="notes-category" id="planNotesSection">
+                    <div class="category-header">
+                        <span class="category-icon">📋</span>
+                        <span class="category-title">Plan Notes</span>
+                        <span class="category-count" id="planNotesCount">0</span>
+                    </div>
+                    <div class="category-notes" id="planNotesList">
+                        <!-- Plan notes will be populated here -->
+                    </div>
+                </div>
+
+                <div class="notes-category" id="codeNotesSection">
+                    <div class="category-header">
+                        <span class="category-icon">💻</span>
+                        <span class="category-title">Code Notes</span>
+                        <span class="category-count" id="codeNotesCount">0</span>
+                    </div>
+                    <div class="category-notes" id="codeNotesList">
+                        <!-- Code notes will be populated here -->
+                    </div>
+                </div>
+
+                <div class="notes-category" id="credentialsNotesSection">
+                    <div class="category-header">
+                        <span class="category-icon">🔐</span>
+                        <span class="category-title">Secure Credentials</span>
+                        <span class="category-count" id="credentialsNotesCount">0</span>
+                    </div>
+                    <div class="category-notes" id="credentialsNotesList">
+                        <!-- Credential notes will be populated here -->
+                    </div>
+                </div>
+
+                <div class="notes-category" id="otherNotesSection">
+                    <div class="category-header">
+                        <span class="category-icon">📄</span>
+                        <span class="category-title">Other Notes</span>
+                        <span class="category-count" id="otherNotesCount">0</span>
+                    </div>
+                    <div class="category-notes" id="otherNotesList">
+                        <!-- Other notes will be populated here -->
+                    </div>
+                </div>
             </div>
             
             <div class="sidebar-footer">
@@ -78,12 +115,65 @@
         
         <!-- Main Content Area -->
         <main class="main-content">
+            <!-- Mobile Header (visible only on mobile) -->
+            <div class="mobile-header">
+                <button class="mobile-menu-btn" id="mobileMenuBtn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+                    </svg>
+                </button>
+                <div class="mobile-title" id="mobileTitle">Note.Lab</div>
+                <div style="width: 40px;"></div> <!-- Spacer for centering -->
+            </div>
+            
             <!-- Welcome Screen -->
             <div class="welcome-screen" id="welcomeScreen">
                 <div class="welcome-content">
-                    <h1>📝 Welcome to Note.Lab</h1>
-                    <p>Your developer-friendly note-taking companion</p>
-                    <button class="btn-primary" id="createFirstNote">Create your first note</button>
+                    <div class="welcome-header">
+                        <h1>📝 Welcome to Note.Lab</h1>
+                        <p>Choose a template to get started with your notes</p>
+                    </div>
+                    
+                    <div class="template-grid">
+                        <div class="template-card" data-template="plan">
+                            <div class="template-icon">📋</div>
+                            <h3>Plan Notes</h3>
+                            <p>Perfect for project planning, task lists, and general note-taking</p>
+                            <div class="template-features">
+                                <span class="feature-tag">✓ Task Lists</span>
+                                <span class="feature-tag">✓ Project Planning</span>
+                                <span class="feature-tag">✓ Meeting Notes</span>
+                            </div>
+                        </div>
+
+                        <div class="template-card" data-template="code">
+                            <div class="template-icon">💻</div>
+                            <h3>Code Notes</h3>
+                            <p>Optimized for developers with syntax highlighting and code snippets</p>
+                            <div class="template-features">
+                                <span class="feature-tag">✓ Syntax Highlighting</span>
+                                <span class="feature-tag">✓ Code Snippets</span>
+                                <span class="feature-tag">✓ API Documentation</span>
+                            </div>
+                        </div>
+
+                        <div class="template-card" data-template="credentials">
+                            <div class="template-icon">🔐</div>
+                            <h3>Secure Credentials</h3>
+                            <p>Safely store passwords, API keys, and sensitive information</p>
+                            <div class="template-features">
+                                <span class="feature-tag">✓ Password Storage</span>
+                                <span class="feature-tag">✓ Field Masking</span>
+                                <span class="feature-tag">✓ Secure Templates</span>
+                            </div>
+                        </div>
+
+
+                    </div>
+
+                    <div class="template-actions">
+                        <button class="btn-secondary" id="createBlankNote">Start with blank note</button>
+                    </div>
                 </div>
             </div>
             
@@ -211,27 +301,219 @@
                         <span class="save-status" id="saveStatus">Saved</span>
                     </div>
                 </div>
+
+                <!-- Plan Note Toolbar (Full Featured) -->
+                <div class="editor-toolbar plan-toolbar" id="planToolbar" style="display: none;">
+                    <div class="toolbar-left">
+                        <!-- Text Formatting Group -->
+                        <div class="toolbar-group">
+                            <button class="toolbar-btn" title="Bold (Ctrl+B)" data-action="bold">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M15.6 10.79c.97-.67 1.65-1.77 1.65-2.79 0-2.26-1.75-4-4-4H7v14h7.04c2.09 0 3.71-1.7 3.71-3.79 0-1.52-.86-2.82-2.15-3.42zM10 6.5h3c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-3v-3zm3.5 9H10v-3h3.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5z"/>
+                                </svg>
+                            </button>
+                            <button class="toolbar-btn" title="Italic (Ctrl+I)" data-action="italic">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M10 4v3h2.21l-3.42 8H6v3h8v-3h-2.21l3.42-8H18V4z"/>
+                                </svg>
+                            </button>
+                            <button class="toolbar-btn" title="Strikethrough" data-action="strikethrough">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M6.85 7.08C6.85 4.37 9.45 3 12.24 3c1.64 0 3 .49 3.9 1.28.77.65 1.46 1.73 1.46 3.24h-3.01c0-.31-.05-.59-.15-.85-.29-.86-1.2-1.28-2.25-1.28-1.86 0-2.34 1.02-2.34 1.7 0 .48.25.88.74 1.21.38.25.77.48 1.41.7H7.39c-.21-.34-.54-.89-.54-1.72zM21 12v2H3v-2h18zM12.56 14c1.1.24 1.86.39 2.24.58.58.28 1.36.78 1.36 2.05C16.16 18.39 14.6 21 12.24 21c-1.64 0-3.16-.37-4.15-1.15C7.16 19.15 6.54 18.22 6.54 17h3.01c0 .44.21.83.67 1.11.35.22.78.31 1.07.31 1.53 0 2.65-.58 2.65-1.9 0-.86-.57-1.18-1.38-1.52z"/>
+                                </svg>
+                            </button>
+                            <button class="toolbar-btn" title="Inline Code" data-action="code">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0L19.2 12l-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/>
+                                </svg>
+                            </button>
+                            <button class="toolbar-btn" title="Paragraph" data-action="paragraph">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M13 4a4 4 0 0 1 4 4 4 4 0 0 1-4 4H9V6h4m0-2H7v14h2v-4h4a6 6 0 0 0 6-6 6 6 0 0 0-6-6z"/>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="toolbar-divider"></div>
+
+                        <!-- Structure Group -->
+                        <div class="toolbar-group">
+                            <div class="toolbar-dropdown">
+                                <button class="toolbar-btn dropdown-toggle" title="Headings" data-action="heading">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M5 4v3h5.5v12h3V7H19V4z"/>
+                                    </svg>
+                                    <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor" class="dropdown-arrow">
+                                        <path d="M7 10l5 5 5-5z"/>
+                                    </svg>
+                                </button>
+                                <div class="dropdown-menu">
+                                    <button data-action="h1">Heading 1</button>
+                                    <button data-action="h2">Heading 2</button>
+                                    <button data-action="h3">Heading 3</button>
+                                    <button data-action="h4">Heading 4</button>
+                                    <button data-action="h5">Heading 5</button>
+                                    <button data-action="h6">Heading 6</button>
+                                </div>
+                            </div>
+                            <button class="toolbar-btn" title="Unordered List" data-action="ul">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M4 10.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zm0-6c-.83 0-1.5.67-1.5 1.5S3.17 7.5 4 7.5 5.5 6.83 5.5 6 4.83 4.5 4 4.5zm0 12c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zM7 19h14v-2H7v2zm0-6h14v-2H7v2zm0-8v2h14V5H7z"/>
+                                </svg>
+                            </button>
+                            <button class="toolbar-btn" title="Ordered List" data-action="ol">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M2 17h2v.5H3v1h1v.5H2v1h3v-4H2v1zm1-9h1V4H2v1h1v3zm-1 3h1.8L2 13.1v.9h3v-1H3.2L5 10.9V10H2v1zm5-6v2h14V5H7zm0 14h14v-2H7v2zm0-6h14v-2H7v2z"/>
+                                </svg>
+                            </button>
+                            <button class="toolbar-btn" title="Blockquote" data-action="quote">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z"/>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="toolbar-divider"></div>
+
+                        <!-- Insert Group -->
+                        <div class="toolbar-group">
+                            <button class="toolbar-btn" title="Link" data-action="link">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
+                                </svg>
+                            </button>
+                            <button class="toolbar-btn" title="Code Block" data-action="codeblock">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M20 3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h3l2 3 2-3h9c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 8.5L7.5 15 6 13.5l1.5-1.5L6 10.5 7.5 9 11 12.5zm6 2.5h-4v-2h4v2z"/>
+                                </svg>
+                            </button>
+                            <button class="toolbar-btn" title="Table" data-action="table">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M10 10.02h5V21h-5zM17 21h3c1.1 0 2-.9 2-2v-9h-5v11zm3-18H5c-1.1 0-2 .9-2 2v3h19V5c0-1.1-.9-2-2-2zM3 19c0 1.1.9 2 2 2h3V10H3v9z"/>
+                                </svg>
+                            </button>
+                            <button class="toolbar-btn" title="Horizontal Rule" data-action="hr">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M4 11h16v2H4z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="toolbar-center">
+                        <button class="toolbar-btn preview-toggle" title="Toggle Preview" data-preview-toggle="plan">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="toolbar-right">
+                        <span class="word-count" id="wordCount">0 words</span>
+                        <span class="save-status" id="saveStatus">Saved</span>
+                        <span class="note-type-indicator">📋 Plan Note</span>
+                    </div>
+                </div>
+
+                <!-- Code Note Toolbar -->
+                <div class="editor-toolbar code-toolbar" id="codeToolbar" style="display: none;">
+                    <div class="toolbar-left">
+                        <div class="toolbar-group">
+                            <div class="toolbar-dropdown">
+                                <button class="dropdown-toggle" data-dropdown="languages">
+                                    <span id="selectedLanguage">JavaScript</span>
+                                    <svg class="dropdown-arrow" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>
+                                    </svg>
+                                </button>
+                                <div class="dropdown-menu" data-menu="languages">
+                                    <button data-lang="javascript">JavaScript</button>
+                                    <button data-lang="python">Python</button>
+                                    <button data-lang="java">Java</button>
+                                    <button data-lang="csharp">C#</button>
+                                    <button data-lang="cpp">C++</button>
+                                    <button data-lang="php">PHP</button>
+                                    <button data-lang="ruby">Ruby</button>
+                                    <button data-lang="go">Go</button>
+                                    <button data-lang="rust">Rust</button>
+                                    <button data-lang="typescript">TypeScript</button>
+                                    <button data-lang="sql">SQL</button>
+                                    <button data-lang="html">HTML</button>
+                                    <button data-lang="css">CSS</button>
+                                    <button data-lang="json">JSON</button>
+                                    <button data-lang="yaml">YAML</button>
+                                    <button data-lang="markdown">Markdown</button>
+                                </div>
+                            </div>
+                            <button class="toolbar-btn" data-action="code-block" title="Insert Code Block">💻</button>
+                            <button class="toolbar-btn" data-action="inline-code" title="Inline Code">📟</button>
+                            <button class="toolbar-btn" data-action="comment" title="Add Comment">💬</button>
+                            <button class="toolbar-btn" data-action="function-template" title="Function Template">⚙️</button>
+                        </div>
+                    </div>
+                    <div class="toolbar-center">
+                        <button class="toolbar-btn preview-toggle" title="Toggle Preview" data-preview-toggle="code">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="toolbar-right">
+                        <span class="note-type-indicator">💻 Code Note</span>
+                    </div>
+                </div>
+
+                <!-- Secure Credentials Toolbar -->
+                <div class="editor-toolbar credentials-toolbar" id="credentialsToolbar" style="display: none;">
+                    <div class="toolbar-left">
+                        <div class="toolbar-group">
+                            <div class="toolbar-dropdown">
+                                <button class="toolbar-btn dropdown-trigger" title="Quick Templates">
+                                    <span>📋 Templates</span>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M7 10l5 5 5-5z"/>
+                                    </svg>
+                                </button>
+                                <div class="dropdown-menu" data-menu="credential-templates">
+                                    <button data-template="web-hosting">🌐 Web Hosting</button>
+                                    <button data-template="domain">🔗 Domain Access</button>
+                                    <button data-template="social-media">📱 Social Media</button>
+                                    <button data-template="email">📧 Email Account</button>
+                                    <button data-template="database">🗄️ Database</button>
+                                    <button data-template="ftp">📁 FTP/SFTP</button>
+                                    <button data-template="api">🔑 API Keys</button>
+                                    <button data-template="server">🖥️ Server Access</button>
+                                </div>
+                            </div>
+                            <button class="toolbar-btn" data-action="generate-password" title="Generate Password">🎲</button>
+                            <button class="toolbar-btn" data-action="quick-form" title="Smart Form">📝</button>
+                        </div>
+                    </div>
+                    <div class="toolbar-center">
+                        <button class="toolbar-btn preview-toggle" title="Toggle Preview" data-preview-toggle="credentials">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="toolbar-right">
+                        <span class="note-type-indicator">🔐 Secure Credentials</span>
+                    </div>
+                </div>
                 
                 <div class="editor-container">
                     <div class="editor-panes">
                         <div class="editor-pane">
-                            <textarea id="codeEditor" placeholder="Start writing your note... 
-
-# Your Note Title
-
-Write your thoughts, code snippets, and ideas here. 
-
-## Code Example
-```javascript
-console.log('Hello, Note.Lab!');
-```
-
-- Use markdown for formatting
-- Add code blocks with syntax highlighting  
-- Organize with headers and lists
-"></textarea>
+                            <textarea id="codeEditor"></textarea>
                         </div>
                         <div class="preview-pane" id="previewPane" style="display: none;">
+                            <!-- Mobile Preview Header -->
+                            <div class="preview-header" style="display: none;">
+                                <div class="preview-title">Preview</div>
+                                <button class="preview-close-btn" id="previewCloseBtn">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                                    </svg>
+                                </button>
+                            </div>
                             <div class="preview-content" id="previewContent">
                                 <div class="preview-placeholder">
                                     <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor" opacity="0.3">
@@ -248,6 +530,64 @@ console.log('Hello, Note.Lab!');
         </main>
     </div>
 
+    <!-- Credential Form Modal -->
+    <div class="modal-overlay" id="credentialModal" style="display: none;">
+        <div class="credential-form-modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">Add Credentials</h3>
+                <button class="modal-close" id="modalClose">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="credentialForm">
+                    <div class="form-group">
+                        <label for="credentialTitle">Title/Service Name</label>
+                        <input type="text" id="credentialTitle" placeholder="e.g., AWS Account, Gmail, GoDaddy">
+                    </div>
+                    <div class="form-group">
+                        <label for="credentialCategory">Category</label>
+                        <select id="credentialCategory">
+                            <option value="web-hosting">🌐 Web Hosting</option>
+                            <option value="domain">🔗 Domain Access</option>
+                            <option value="social-media">📱 Social Media</option>
+                            <option value="email">📧 Email Account</option>
+                            <option value="database">🗄️ Database</option>
+                            <option value="ftp">📁 FTP/SFTP</option>
+                            <option value="api">🔑 API Keys</option>
+                            <option value="server">🖥️ Server Access</option>
+                            <option value="other">🔧 Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="credentialUrl">URL/Website</label>
+                        <input type="url" id="credentialUrl" placeholder="https://example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="credentialUsername">Username/Email</label>
+                        <input type="text" id="credentialUsername" placeholder="username or email@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="credentialPassword">Password</label>
+                        <div class="password-input-group">
+                            <input type="password" id="credentialPassword" placeholder="Enter password">
+                            <button type="button" class="password-toggle" id="passwordToggle">👁️</button>
+                            <button type="button" class="generate-btn" id="generateBtn">🎲</button>
+                        </div>
+                    </div>
+                    <div class="form-group" id="dynamicFields">
+                        <!-- Dynamic fields will be inserted here based on category -->
+                    </div>
+                    <div class="form-group">
+                        <label for="credentialNotes">Additional Notes</label>
+                        <textarea id="credentialNotes" rows="3" placeholder="Any additional information..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="modalCancel">Cancel</button>
+                <button type="button" class="btn-primary" id="modalSave">Insert Credentials</button>
+            </div>
+        </div>
+    </div>
     
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
@@ -256,11 +596,19 @@ console.log('Hello, Note.Lab!');
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/php/php.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/ruby/ruby.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/go/go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/rust/rust.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/sql/sql.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/display/placeholder.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/5.1.1/marked.min.js"></script>
     <script src="frontend/js/app.js"></script>
     <script src="frontend/js/editor.js"></script>
+    <script src="frontend/js/templates.js"></script>
 </body>
 </html>
