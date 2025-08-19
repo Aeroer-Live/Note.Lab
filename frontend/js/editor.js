@@ -2,6 +2,9 @@
 class NoteEditor {
     constructor() {
         this.editor = null;
+        this.previewMode = false;
+        this.splitView = false;
+        this.resizing = false;
         this.init();
     }
     
@@ -10,6 +13,8 @@ class NoteEditor {
         document.addEventListener('DOMContentLoaded', () => {
             this.initializeEditor();
             this.bindToolbarEvents();
+            this.bindPreviewEvents();
+            this.setupResizeHandle();
         });
     }
     
@@ -68,38 +73,220 @@ class NoteEditor {
     }
     
     bindToolbarEvents() {
-        // Toolbar buttons
-        document.querySelector('[title="Bold"]').addEventListener('click', () => {
-            this.formatText('bold');
+        // Enhanced toolbar events
+        document.querySelectorAll('.toolbar-btn[data-action]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const action = btn.dataset.action;
+                this.handleToolbarAction(action);
+            });
         });
-        
-        document.querySelector('[title="Italic"]').addEventListener('click', () => {
-            this.formatText('italic');
+
+        // Dropdown functionality
+        document.querySelectorAll('.toolbar-dropdown').forEach(dropdown => {
+            const toggle = dropdown.querySelector('.dropdown-toggle');
+            const menu = dropdown.querySelector('.dropdown-menu');
+            
+            toggle.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Close other dropdowns
+                document.querySelectorAll('.dropdown-menu.show').forEach(m => {
+                    if (m !== menu) m.classList.remove('show');
+                });
+                
+                menu.classList.toggle('show');
+                toggle.classList.toggle('active');
+            });
+
+            // Handle dropdown menu clicks
+            menu.querySelectorAll('button[data-action]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const action = btn.dataset.action;
+                    this.handleToolbarAction(action);
+                    menu.classList.remove('show');
+                    toggle.classList.remove('active');
+                });
+            });
         });
-        
-        document.querySelector('[title="Code"]').addEventListener('click', () => {
-            this.formatText('code');
-        });
-        
-        document.querySelector('[title="Link"]').addEventListener('click', () => {
-            this.formatText('link');
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', () => {
+            document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+                menu.classList.remove('show');
+                menu.closest('.toolbar-dropdown').querySelector('.dropdown-toggle').classList.remove('active');
+            });
         });
     }
+
+    bindPreviewEvents() {
+        const previewToggle = document.getElementById('previewToggle');
+        previewToggle.addEventListener('click', () => {
+            this.togglePreview();
+        });
+    }
+
+    setupResizeHandle() {
+        const resizeHandle = document.getElementById('resizeHandle');
+        const editorPanes = document.querySelector('.editor-panes');
+        const editorPane = document.querySelector('.editor-pane');
+        const previewPane = document.querySelector('.preview-pane');
+
+        resizeHandle.addEventListener('mousedown', (e) => {
+            this.resizing = true;
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+
+            const handleMouseMove = (e) => {
+                if (!this.resizing) return;
+
+                const containerRect = editorPanes.getBoundingClientRect();
+                const newWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+                
+                if (newWidth > 20 && newWidth < 80) {
+                    editorPane.style.flex = `0 0 ${newWidth}%`;
+                    previewPane.style.flex = `0 0 ${100 - newWidth}%`;
+                }
+            };
+
+            const handleMouseUp = () => {
+                this.resizing = false;
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            };
+
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+        });
+    }
+
+    handleToolbarAction(action) {
+        switch (action) {
+            case 'bold':
+                this.formatText('bold');
+                break;
+            case 'italic':
+                this.formatText('italic');
+                break;
+            case 'strikethrough':
+                this.formatText('strikethrough');
+                break;
+            case 'code':
+                this.formatText('code');
+                break;
+            case 'h1':
+            case 'h2':
+            case 'h3':
+            case 'h4':
+            case 'h5':
+            case 'h6':
+                this.formatText('heading', action);
+                break;
+            case 'ul':
+                this.formatText('ul');
+                break;
+            case 'ol':
+                this.formatText('ol');
+                break;
+            case 'quote':
+                this.formatText('blockquote');
+                break;
+            case 'link':
+                this.formatText('link');
+                break;
+            case 'codeblock':
+                this.formatText('codeblock');
+                break;
+            case 'table':
+                this.formatText('table');
+                break;
+            case 'hr':
+                this.formatText('hr');
+                break;
+        }
+    }
+
+    togglePreview() {
+        const previewPane = document.getElementById('previewPane');
+        const resizeHandle = document.getElementById('resizeHandle');
+        const editorPanes = document.querySelector('.editor-panes');
+        const previewToggle = document.getElementById('previewToggle');
+
+        if (!this.previewMode) {
+            // Show preview
+            previewPane.style.display = 'flex';
+            resizeHandle.style.display = 'block';
+            editorPanes.classList.add('split-view');
+            previewToggle.classList.add('active');
+            this.previewMode = true;
+            this.updatePreview();
+        } else {
+            // Hide preview
+            previewPane.style.display = 'none';
+            resizeHandle.style.display = 'none';
+            editorPanes.classList.remove('split-view');
+            previewToggle.classList.remove('active');
+            this.previewMode = false;
+        }
+
+        // Refresh CodeMirror after layout change
+        setTimeout(() => {
+            if (this.editor) {
+                this.editor.refresh();
+            }
+        }, 100);
+    }
+
+    updatePreview() {
+        if (!this.previewMode || !window.marked) return;
+
+        const content = this.editor ? this.editor.getValue() : '';
+        const previewContent = document.getElementById('previewContent');
+        
+        if (content.trim() === '') {
+            previewContent.innerHTML = `
+                <div class="preview-placeholder">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor" opacity="0.3">
+                        <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                    </svg>
+                    <p>Preview will appear here</p>
+                </div>
+            `;
+        } else {
+            try {
+                const html = marked.parse(content);
+                previewContent.innerHTML = html;
+                
+                // Highlight code blocks if Prism is available
+                if (window.Prism) {
+                    window.Prism.highlightAllUnder(previewContent);
+                }
+            } catch (error) {
+                console.error('Markdown parsing error:', error);
+                previewContent.innerHTML = `<p style="color: var(--accent-danger);">Error parsing markdown</p>`;
+            }
+        }
+    }
     
-    formatText(type) {
+    formatText(type, subtype = null) {
         if (!this.editor) return;
         
         const selection = this.editor.getSelection();
         const cursor = this.editor.getCursor();
+        const doc = this.editor.getDoc();
         
         let replacement = '';
         let cursorOffset = 0;
+        let lineMode = false;
         
         switch (type) {
             case 'bold':
                 if (selection) {
                     replacement = `**${selection}**`;
-                    cursorOffset = 2;
                 } else {
                     replacement = '**bold text**';
                     cursorOffset = 2;
@@ -109,21 +296,73 @@ class NoteEditor {
             case 'italic':
                 if (selection) {
                     replacement = `*${selection}*`;
-                    cursorOffset = 1;
                 } else {
                     replacement = '*italic text*';
                     cursorOffset = 1;
+                }
+                break;
+
+            case 'strikethrough':
+                if (selection) {
+                    replacement = `~~${selection}~~`;
+                } else {
+                    replacement = '~~strikethrough text~~';
+                    cursorOffset = 2;
                 }
                 break;
                 
             case 'code':
                 if (selection) {
                     replacement = `\`${selection}\``;
-                    cursorOffset = 1;
                 } else {
                     replacement = '`code`';
                     cursorOffset = 1;
                 }
+                break;
+
+            case 'heading':
+                const level = parseInt(subtype.charAt(1));
+                const prefix = '#'.repeat(level) + ' ';
+                if (selection) {
+                    replacement = `${prefix}${selection}`;
+                } else {
+                    replacement = `${prefix}Heading ${level}`;
+                    cursorOffset = prefix.length;
+                }
+                lineMode = true;
+                break;
+
+            case 'ul':
+                if (selection) {
+                    const lines = selection.split('\n');
+                    replacement = lines.map(line => `- ${line}`).join('\n');
+                } else {
+                    replacement = '- List item';
+                    cursorOffset = 2;
+                }
+                lineMode = true;
+                break;
+
+            case 'ol':
+                if (selection) {
+                    const lines = selection.split('\n');
+                    replacement = lines.map((line, i) => `${i + 1}. ${line}`).join('\n');
+                } else {
+                    replacement = '1. List item';
+                    cursorOffset = 3;
+                }
+                lineMode = true;
+                break;
+
+            case 'blockquote':
+                if (selection) {
+                    const lines = selection.split('\n');
+                    replacement = lines.map(line => `> ${line}`).join('\n');
+                } else {
+                    replacement = '> Blockquote';
+                    cursorOffset = 2;
+                }
+                lineMode = true;
                 break;
                 
             case 'link':
@@ -132,18 +371,55 @@ class NoteEditor {
                 replacement = `[${text}](${url})`;
                 cursorOffset = 1;
                 break;
+
+            case 'codeblock':
+                const language = 'javascript'; // Default language
+                if (selection) {
+                    replacement = `\`\`\`${language}\n${selection}\n\`\`\``;
+                } else {
+                    replacement = `\`\`\`${language}\n// Your code here\n\`\`\``;
+                    cursorOffset = language.length + 5; // Position after language
+                }
+                lineMode = true;
+                break;
+
+            case 'table':
+                replacement = `| Column 1 | Column 2 | Column 3 |\n|----------|----------|----------|\n| Cell 1   | Cell 2   | Cell 3   |\n| Cell 4   | Cell 5   | Cell 6   |`;
+                lineMode = true;
+                break;
+
+            case 'hr':
+                replacement = '\n---\n';
+                lineMode = true;
+                break;
         }
         
+        if (lineMode) {
+            // Insert at beginning of line
+            const lineStart = { line: cursor.line, ch: 0 };
+            const lineEnd = { line: cursor.line, ch: doc.getLine(cursor.line).length };
+            
+            if (selection) {
+                this.editor.replaceSelection(replacement);
+            } else {
+                this.editor.replaceRange(replacement, lineStart);
+                if (cursorOffset > 0) {
+                    this.editor.setCursor({ line: cursor.line, ch: cursorOffset });
+                }
+            }
+        } else {
         if (selection) {
             this.editor.replaceSelection(replacement);
         } else {
             this.editor.replaceRange(replacement, cursor);
-            // Set cursor position
+                if (cursorOffset > 0) {
             const newCursor = {
                 line: cursor.line,
                 ch: cursor.ch + cursorOffset
             };
             this.editor.setCursor(newCursor);
+                }
+            }
         }
         
         this.editor.focus();
@@ -167,6 +443,7 @@ class NoteEditor {
         }
         
         this.updateWordCount();
+        this.updatePreview();
     }
     
     updateWordCount() {

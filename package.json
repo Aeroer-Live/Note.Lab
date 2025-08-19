@@ -7,8 +7,8 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "build": "npm run build:frontend",
-    "build:frontend": "mkdir -p dist && cp -r frontend/* dist/",
-    "serve": "python3 -m http.server 8000 --directory frontend"
+    "build:frontend": "mkdir -p dist && cp -r frontend/* dist/ && cp *.html dist/ && sed -i 's|frontend/|.|g' dist/*.html",
+    "serve": "python3 -m http.server 8000"
   },
   "keywords": ["notes", "developer", "markdown", "cloudflare"],
   "author": "Your Name",

@@ -330,7 +330,7 @@ class LoginManager {
             this.showMessage('Welcome back! Redirecting...', 'success');
             
             setTimeout(() => {
-                window.location.href = 'index.html';
+                window.location.href = '../index.html';
             }, 1500);
             
             return;
@@ -347,7 +347,7 @@ class LoginManager {
             this.showMessage('Welcome back! Redirecting...', 'success');
             
             setTimeout(() => {
-                window.location.href = 'index.html';
+                window.location.href = '../index.html';
             }, 1500);
         } else {
             throw new Error(response.error || 'Sign in failed');
@@ -367,7 +367,7 @@ class LoginManager {
             this.showMessage('Account created successfully! Redirecting...', 'success');
             
             setTimeout(() => {
-                window.location.href = 'index.html';
+                window.location.href = '../index.html';
             }, 1500);
         } else {
             throw new Error(response.error || 'Sign up failed');

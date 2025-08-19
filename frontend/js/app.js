@@ -409,7 +409,7 @@ class NoteApp {
         this.currentNote = null;
         
         // Redirect to login page
-        window.location.href = 'login.html';
+        window.location.href = '../login.html';
     }
 }
 
