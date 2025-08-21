@@ -78,6 +78,10 @@ class NoteApp {
         // Search
         document.getElementById('searchInput').addEventListener('input', (e) => {
             this.searchNotes(e.target.value);
+            // Close mobile menu when user starts typing in search
+            if (window.innerWidth <= 768) {
+                this.closeMobileMenu();
+            }
         });
 
         // Category header collapse/expand
@@ -93,6 +97,10 @@ class NoteApp {
         });
         
         // Note actions
+        document.getElementById('saveNote').addEventListener('click', () => {
+            this.saveAndReturnToWelcome();
+        });
+        
         document.getElementById('starNote').addEventListener('click', () => {
             this.toggleStar();
         });
@@ -143,6 +151,11 @@ class NoteApp {
         this.displayNotes();
         this.saveNotes();
         
+        // Close mobile menu if on mobile
+        if (window.innerWidth <= 768) {
+            this.closeMobileMenu();
+        }
+        
         // Focus on title
         setTimeout(() => {
             document.getElementById('noteTitle').focus();
@@ -169,6 +182,11 @@ class NoteApp {
         this.selectNote(note);
         this.displayNotes();
         this.saveNotes();
+        
+        // Close mobile menu if on mobile
+        if (window.innerWidth <= 768) {
+            this.closeMobileMenu();
+        }
         
         // Focus on title for easy editing
         setTimeout(() => {
@@ -209,6 +227,12 @@ class NoteApp {
         this.updateNoteEditor();
         this.updateActiveNoteInList();
         this.updateMobileTitle();
+        this.updateSaveButtonVisibility();
+        
+        // Close mobile menu if on mobile
+        if (window.innerWidth <= 768) {
+            this.closeMobileMenu();
+        }
         
         // Set template-specific behavior
         if (window.templateManager && note.type) {
@@ -291,6 +315,11 @@ class NoteApp {
         this.updateNoteEditor();
         this.updateNoteInList();
         this.saveNotes();
+        
+        // Close mobile menu if on mobile
+        if (window.innerWidth <= 768) {
+            this.closeMobileMenu();
+        }
     }
     
     deleteCurrentNote() {
@@ -304,6 +333,127 @@ class NoteApp {
             this.displayNotes();
             this.showWelcomeOrEditor();
         }
+    }
+    
+    deleteNoteFromList(noteId) {
+        const note = this.notes.find(n => n.id === noteId);
+        if (!note) return;
+        
+        if (confirm(`Are you sure you want to delete "${note.title}"?`)) {
+            // Remove from notes array
+            this.notes = this.notes.filter(n => n.id !== noteId);
+            
+            // If this was the currently selected note, clear selection
+            if (this.currentNote && this.currentNote.id === noteId) {
+                this.currentNote = null;
+                this.showWelcomeOrEditor();
+            }
+            
+            // Save and update display
+            this.saveNotes();
+            this.displayNotes();
+        }
+    }
+    
+    saveAndReturnToWelcome() {
+        if (!this.currentNote) return;
+        
+        // Update the current note with latest content
+        this.updateCurrentNoteContent();
+        
+        // Save notes to localStorage
+        this.saveNotes();
+        
+        // Clear current note selection
+        this.currentNote = null;
+        
+        // Update the display
+        this.displayNotes();
+        
+        // Show welcome screen
+        this.showWelcomeOrEditor();
+        
+        // Show success message
+        this.showSaveSuccessMessage();
+    }
+    
+    updateCurrentNoteContent() {
+        if (!this.currentNote) return;
+        
+        // Update title
+        const titleInput = document.getElementById('noteTitle');
+        if (titleInput) {
+            this.currentNote.title = titleInput.value || 'Untitled note';
+        }
+        
+        // Update content from editor
+        if (window.editor) {
+            this.currentNote.content = window.editor.getValue();
+        } else {
+            const contentTextarea = document.getElementById('codeEditor');
+            if (contentTextarea) {
+                this.currentNote.content = contentTextarea.value;
+            }
+        }
+        
+        // Update timestamp
+        this.currentNote.updatedAt = new Date().toISOString();
+    }
+    
+    showSaveSuccessMessage() {
+        // Create a temporary success message
+        const message = document.createElement('div');
+        message.className = 'save-success-message';
+        message.innerHTML = `
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.97a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
+            </svg>
+            Note saved successfully!
+        `;
+        
+        // Add styles
+        message.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideInRight 0.3s ease-out;
+        `;
+        
+        // Add animation styles
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideInRight {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        document.body.appendChild(message);
+        
+        // Remove message after 3 seconds
+        setTimeout(() => {
+            if (message.parentNode) {
+                message.parentNode.removeChild(message);
+            }
+        }, 3000);
     }
     
     searchNotes(query) {
@@ -383,23 +533,45 @@ class NoteApp {
             // Generate notes HTML
             notesList.innerHTML = notes.map(note => `
                 <div class="note-item" data-note-id="${note.id}">
-                    <div class="note-item-title">${this.escapeHtml(note.title)}</div>
-                    <div class="note-item-preview">${this.escapeHtml(this.getPreviewText(note.content))}</div>
-                    <div class="note-item-meta">
-                        <span class="note-item-time">${this.formatTime(note.updatedAt)}</span>
-                        ${note.starred ? '<span class="note-starred">★</span>' : ''}
+                    <div class="note-item-content">
+                        <div class="note-item-title">${this.escapeHtml(note.title)}</div>
+                        <div class="note-item-preview">${this.escapeHtml(this.getPreviewText(note.content))}</div>
+                        <div class="note-item-meta">
+                            <span class="note-item-time">${this.formatTime(note.updatedAt)}</span>
+                            ${note.starred ? '<span class="note-starred">★</span>' : ''}
+                        </div>
                     </div>
+                    <button class="note-delete-btn" data-note-id="${note.id}" title="Delete note">
+                        <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z"/>
+                            <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z"/>
+                        </svg>
+                    </button>
                 </div>
             `).join('');
 
             // Bind click events for this category
             notesList.querySelectorAll('.note-item').forEach(item => {
-                item.addEventListener('click', () => {
+                item.addEventListener('click', (e) => {
+                    // Don't trigger note selection if clicking delete button
+                    if (e.target.closest('.note-delete-btn')) {
+                        return;
+                    }
+                    
                     const noteId = item.dataset.noteId;
                     const note = this.notes.find(n => n.id === noteId);
                     if (note) {
                         this.selectNote(note);
                     }
+                });
+            });
+            
+            // Bind delete button events
+            notesList.querySelectorAll('.note-delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent note selection
+                    const noteId = btn.dataset.noteId;
+                    this.deleteNoteFromList(noteId);
                 });
             });
         }
@@ -451,6 +623,7 @@ class NoteApp {
         if (this.notes.length === 0 || !this.currentNote) {
             welcomeScreen.style.display = 'flex';
             noteEditor.style.display = 'none';
+            this.updateSaveButtonVisibility(); // Hide save buttons on welcome screen
         } else {
             this.showEditor();
         }
@@ -462,6 +635,17 @@ class NoteApp {
         
         welcomeScreen.style.display = 'none';
         noteEditor.style.display = 'flex';
+        
+        // Ensure save button is visible when editor is shown
+        this.updateSaveButtonVisibility();
+    }
+    
+    updateSaveButtonVisibility() {
+        // Show save button when a note is being edited
+        const saveButton = document.getElementById('saveNote');
+        if (saveButton) {
+            saveButton.style.display = this.currentNote ? 'flex' : 'none';
+        }
     }
     
     updateWordCount() {
@@ -534,14 +718,23 @@ class NoteApp {
 
         // Mobile menu toggle
         if (mobileMenuBtn) {
-            mobileMenuBtn.addEventListener('click', () => {
+            mobileMenuBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 this.toggleMobileMenu();
             });
         }
 
         // Close menu when clicking overlay
         if (mobileOverlay) {
-            mobileOverlay.addEventListener('click', () => {
+            mobileOverlay.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.closeMobileMenu();
+            });
+            
+            // Also handle touch events for better mobile support
+            mobileOverlay.addEventListener('touchstart', (e) => {
+                e.preventDefault();
                 this.closeMobileMenu();
             });
         }
@@ -555,6 +748,48 @@ class NoteApp {
             });
         });
 
+        // Close menu when clicking a note item (mobile)
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 768 && e.target.closest('.note-item')) {
+                this.closeMobileMenu();
+            }
+        });
+
+        // Close menu when clicking outside sidebar (mobile)
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 768) {
+                const sidebar = document.getElementById('sidebar');
+                const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+                
+                // Check if sidebar is open and click is outside sidebar and not on menu button
+                if (sidebar && sidebar.classList.contains('open') && 
+                    !sidebar.contains(e.target) && 
+                    !mobileMenuBtn.contains(e.target)) {
+                    this.closeMobileMenu();
+                }
+            }
+        });
+
+        // Close menu when clicking on main content area (mobile)
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 768) {
+                const mainContent = document.querySelector('.main-content');
+                const sidebar = document.getElementById('sidebar');
+                
+                if (mainContent && mainContent.contains(e.target) && 
+                    sidebar && sidebar.classList.contains('open')) {
+                    this.closeMobileMenu();
+                }
+            }
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) {
+                this.closeMobileMenu();
+            }
+        });
+
         // Update mobile title when note changes
         this.updateMobileTitle();
     }
@@ -562,17 +797,27 @@ class NoteApp {
     toggleMobileMenu() {
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('mobileOverlay');
+        const body = document.body;
         
         sidebar.classList.toggle('open');
         overlay.classList.toggle('show');
+        
+        // Prevent body scroll when sidebar is open
+        if (sidebar.classList.contains('open')) {
+            body.style.overflow = 'hidden';
+        } else {
+            body.style.overflow = '';
+        }
     }
 
     closeMobileMenu() {
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('mobileOverlay');
+        const body = document.body;
         
         sidebar.classList.remove('open');
         overlay.classList.remove('show');
+        body.style.overflow = '';
     }
 
     updateMobileTitle() {

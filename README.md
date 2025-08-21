@@ -9,6 +9,7 @@ A cloud-based note-taking system tailored for developers, featuring GitHub-inspi
 - **Cloud Sync** - access notes from any device
 - **Organization** - tags, folders, search, and starred notes
 - **Auto-save** - never lose your work
+- **Save & Return** - one-click save that returns to welcome page
 - **Responsive Design** - works on desktop and mobile
 
 ## 🛠️ Tech Stack

@@ -42,6 +42,40 @@
     gap: var(--space-2);
 }
 
+/* Save Button Styles */
+.save-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background-color: var(--accent-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 80px;
+    justify-content: center;
+}
+
+.save-btn:hover {
+    background-color: var(--accent-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.save-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.save-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
 /* Editor Toolbar */
 .editor-toolbar {
     padding: var(--space-3) var(--space-4);
@@ -308,19 +342,30 @@
 
 /* Mobile Responsive Design */
 @media (max-width: 768px) {
+    .note-editor {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
     .editor-header {
         padding: var(--space-3);
         flex-wrap: wrap;
         gap: var(--space-2);
+        flex-shrink: 0;
     }
 
     .note-title {
         font-size: 16px;
         padding: var(--space-2);
+        min-width: 0;
+        flex: 1;
     }
 
     .editor-actions {
         flex-shrink: 0;
+        display: flex;
+        gap: var(--space-2);
     }
 
     .editor-toolbar {
@@ -336,6 +381,7 @@
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
         -ms-overflow-style: none;
+        padding-bottom: var(--space-1);
     }
 
     .toolbar-left::-webkit-scrollbar {
@@ -345,6 +391,7 @@
     .toolbar-group {
         gap: var(--space-1);
         flex-shrink: 0;
+        margin-right: var(--space-2);
     }
 
     .toolbar-btn {
@@ -372,6 +419,30 @@
         font-size: 11px;
     }
 
+    .editor-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .editor-panes {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .editor-pane {
+        flex: 1;
+        min-height: 0;
+    }
+
+    .CodeMirror {
+        height: 100% !important;
+        font-size: 14px;
+    }
+
     /* Mobile preview handling */
     .preview-pane {
         position: fixed;
@@ -382,6 +453,43 @@
         z-index: 1000;
         background: var(--bg-primary);
         min-width: auto;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .preview-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-3) var(--space-4);
+        background: var(--bg-secondary);
+        border-bottom: 1px solid var(--border-default);
+        flex-shrink: 0;
+    }
+
+    .preview-title {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .preview-close-btn {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        padding: var(--space-2);
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+    }
+
+    .preview-close-btn:hover {
+        background: var(--bg-hover);
+        color: var(--text-primary);
+    }
+
+    .preview-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: var(--space-4);
     }
 
     .editor-panes.split-view .editor-pane {
