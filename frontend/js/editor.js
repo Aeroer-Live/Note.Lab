@@ -149,13 +149,85 @@ class NoteEditor {
             this.previewEventListeners.push({ element: button, listener });
         });
 
-        // Handle mobile preview close button
+        // Handle mobile preview close button with multiple approaches
+        this.setupPreviewCloseButton();
+        
+        // Fallback: Add global event listener for preview close button
+        const fallbackListener = (e) => {
+            if (e.target.closest('#previewCloseBtn')) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Preview close button clicked (fallback)!');
+                this.togglePreview();
+            }
+        };
+        document.addEventListener('click', fallbackListener);
+        this.previewEventListeners.push({ element: document, listener: fallbackListener });
+    }
+
+    setupPreviewCloseButton() {
+        // Function to bind events to the close button
+        const bindCloseButtonEvents = (button) => {
+            if (!button) return;
+            
+            console.log('Setting up preview close button events');
+            
+            // Remove any existing listeners to prevent duplicates
+            button.removeEventListener('click', this.handlePreviewClose);
+            button.removeEventListener('touchstart', this.handlePreviewClose);
+            button.removeEventListener('mousedown', this.handlePreviewClose);
+            
+            // Create the handler function
+            this.handlePreviewClose = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Preview close button activated!');
+                this.togglePreview();
+            };
+            
+            // Add multiple event listeners for maximum compatibility
+            button.addEventListener('click', this.handlePreviewClose);
+            button.addEventListener('touchstart', this.handlePreviewClose);
+            button.addEventListener('mousedown', this.handlePreviewClose);
+            
+            // Add visual feedback
+            button.style.cursor = 'pointer';
+            button.setAttribute('title', 'Close Preview');
+            
+            console.log('Preview close button events bound successfully');
+        };
+        
+        // Try to bind immediately if button exists
         const previewCloseBtn = document.getElementById('previewCloseBtn');
         if (previewCloseBtn) {
-            previewCloseBtn.addEventListener('click', () => {
-                this.togglePreview();
-            });
+            bindCloseButtonEvents(previewCloseBtn);
         }
+        
+        // Set up a mutation observer to catch when the button is added to DOM
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        // Check if the added node is the button
+                        if (node.id === 'previewCloseBtn') {
+                            console.log('Preview close button added to DOM');
+                            bindCloseButtonEvents(node);
+                        }
+                        // Check if the button is inside the added node
+                        const button = node.querySelector('#previewCloseBtn');
+                        if (button) {
+                            console.log('Preview close button found inside added node');
+                            bindCloseButtonEvents(button);
+                        }
+                    }
+                });
+            });
+        });
+        
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
     }
 
     setupResizeHandle() {
@@ -276,6 +348,21 @@ class NoteEditor {
             // Show mobile preview header on mobile
             if (isMobile && previewHeader) {
                 previewHeader.style.display = 'flex';
+                console.log('Mobile preview header shown');
+                
+                // Re-bind close button events after showing header
+                setTimeout(() => {
+                    const closeBtn = document.getElementById('previewCloseBtn');
+                    if (closeBtn) {
+                        console.log('Re-binding close button events');
+                        closeBtn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('Preview close button clicked (re-bound)!');
+                            this.togglePreview();
+                        });
+                    }
+                }, 100);
             }
             
             this.previewMode = true;
@@ -293,6 +380,7 @@ class NoteEditor {
             // Hide mobile preview header
             if (previewHeader) {
                 previewHeader.style.display = 'none';
+                console.log('Mobile preview header hidden');
             }
             
             this.previewMode = false;

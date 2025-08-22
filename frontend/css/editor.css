@@ -514,36 +514,79 @@
         right: 0;
         background: var(--bg-secondary);
         border-bottom: 1px solid var(--border-default);
-        padding: var(--space-3);
+        padding: var(--space-3) var(--space-4);
         z-index: 1001;
-        display: flex !important;
+        display: none; /* Start hidden, will be shown by JavaScript */
         align-items: center;
         justify-content: space-between;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
     .preview-title {
         font-size: 16px;
         font-weight: 600;
         color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
     }
 
     .preview-close-btn {
-        background: none;
+        background: var(--accent-danger);
         border: none;
-        color: var(--text-primary);
-        font-size: 20px;
+        color: white;
         cursor: pointer;
-        padding: var(--space-1);
-        border-radius: var(--radius-sm);
+        padding: var(--space-2);
+        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 32px;
-        height: 32px;
+        width: 44px;
+        height: 44px;
+        touch-action: manipulation;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 8px rgba(218, 54, 51, 0.3);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .preview-close-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0));
+        border-radius: 50%;
+        opacity: 0;
+        transition: opacity 0.2s ease;
     }
 
     .preview-close-btn:hover {
-        background: var(--bg-hover);
+        background: #e53e3e;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(218, 54, 51, 0.4);
+    }
+
+    .preview-close-btn:hover::before {
+        opacity: 1;
+    }
+
+    .preview-close-btn:active {
+        transform: translateY(0) scale(0.95);
+        box-shadow: 0 2px 4px rgba(218, 54, 51, 0.3);
+    }
+
+    .preview-close-btn svg {
+        position: relative;
+        z-index: 1;
+        transition: transform 0.2s ease;
+    }
+
+    .preview-close-btn:hover svg {
+        transform: rotate(90deg);
     }
 
     /* Dropdown adjustments for mobile */
