@@ -2,22 +2,26 @@ name = "note-lab"
 main = "backend/src/index.js"
 compatibility_date = "2023-12-01"
 
+[site]
+bucket = "."
+
 [env.production]
 name = "note-lab-prod"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "note-lab-db"
-database_id = ""
+database_id = "a1fa7e4e-daf5-44a2-b449-1864bc520e74"
 
 [[kv_namespaces]]
 binding = "SESSIONS"
-id = ""
-preview_id = ""
+id = "76d60814d67345c4b103465a0b8e7f51"
+preview_id = "623698e1da4943b198637c52dd7e3508"
 
-[[r2_buckets]]
-binding = "ATTACHMENTS"
-bucket_name = "note-lab-attachments"
+# R2 bucket configuration (commented out until R2 is enabled)
+# [[r2_buckets]]
+# binding = "ATTACHMENTS"
+# bucket_name = "note-lab-attachments"
 
 [vars]
-ENVIRONMENT = "development"
+ENVIRONMENT = "production"

@@ -199,6 +199,32 @@
     background: rgba(218, 54, 51, 0.1);
     color: #ff6b6b;
     border: 1px solid rgba(218, 54, 51, 0.2);
+    position: relative;
+    padding-right: 40px;
+}
+
+.message-close {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #ff6b6b;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s ease;
+}
+
+.message-close:hover {
+    background: rgba(255, 107, 107, 0.1);
 }
 
 .auth-message-success {
@@ -286,6 +312,47 @@
     color: var(--text-primary);
 }
 
+.password-strength {
+    margin-top: var(--space-2);
+    font-size: 12px;
+}
+
+.strength-bar {
+    width: 100%;
+    height: 4px;
+    background: var(--border-default);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: var(--space-1);
+}
+
+.strength-fill {
+    height: 100%;
+    width: 0%;
+    transition: all 0.3s ease;
+    border-radius: 2px;
+}
+
+.strength-fill.weak { width: 25%; background: #ff6b6b; }
+.strength-fill.fair { width: 50%; background: #ffd93d; }
+.strength-fill.good { width: 75%; background: #6bcf7f; }
+.strength-fill.strong { width: 100%; background: #51cf66; }
+
+.strength-text {
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+.password-requirements {
+    margin-top: var(--space-2);
+}
+
+.requirements-text {
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.4;
+}
+
 /* Form Options */
 .form-options {
     display: flex;
@@ -370,69 +437,7 @@
     to { transform: rotate(360deg); }
 }
 
-/* Demo Section */
-.demo-section {
-    margin-top: var(--space-6);
-}
 
-.divider {
-    position: relative;
-    text-align: center;
-    margin: var(--space-4) 0;
-}
-
-.divider::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: var(--border-default);
-}
-
-.divider-text {
-    background: var(--bg-secondary);
-    color: var(--text-muted);
-    padding: 0 var(--space-3);
-    font-size: 14px;
-    position: relative;
-    z-index: 1;
-}
-
-.btn-demo {
-    width: 100%;
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-default);
-    padding: var(--space-3);
-    border-radius: var(--radius-md);
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-2);
-}
-
-.btn-demo:hover {
-    background: var(--bg-hover);
-    border-color: var(--accent-secondary);
-}
-
-.demo-info {
-    text-align: center;
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-top: var(--space-2);
-}
-
-.demo-info strong {
-    color: var(--accent-secondary);
-    font-family: var(--font-mono);
-}
 
 /* Footer */
 .login-footer {
@@ -564,5 +569,169 @@ input:focus-visible,
     .login-form-container {
         transform: none !important;
         opacity: 1 !important;
+    }
+}
+
+/* Forgot Password Specific Styles */
+.back-to-login {
+    text-align: center;
+    margin-top: var(--space-4);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--border-muted);
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 14px;
+    transition: color 0.2s ease;
+}
+
+.back-link:hover {
+    color: var(--text-primary);
+}
+
+.back-link svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Success Message Styles */
+.success-message {
+    text-align: center;
+    padding: var(--space-6);
+}
+
+.success-icon {
+    margin-bottom: var(--space-4);
+    color: var(--accent-primary);
+}
+
+.success-message h3 {
+    margin-bottom: var(--space-3);
+    color: var(--text-primary);
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.success-message p {
+    margin-bottom: var(--space-5);
+    color: var(--text-secondary);
+    line-height: 1.6;
+    font-size: 14px;
+}
+
+.success-actions {
+    display: flex;
+    gap: var(--space-3);
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.success-actions .btn-secondary,
+.success-actions .btn-primary {
+    min-width: 120px;
+}
+
+/* Step Navigation for Forgot Password */
+.auth-tabs[data-steps="2"] {
+    display: flex;
+    gap: var(--space-1);
+    margin-bottom: var(--space-4);
+}
+
+.auth-tabs[data-steps="2"] .auth-tab {
+    flex: 1;
+    padding: var(--space-2) var(--space-3);
+    font-size: 13px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-muted);
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+}
+
+.auth-tabs[data-steps="2"] .auth-tab.active {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: white;
+}
+
+.auth-tabs[data-steps="2"] .auth-tab:hover:not(.active) {
+    background: var(--bg-hover);
+    border-color: var(--border-default);
+    color: var(--text-primary);
+}
+
+/* Password Strength Indicator */
+.password-strength {
+    margin-top: var(--space-2);
+    font-size: 12px;
+}
+
+.password-strength-bar {
+    height: 4px;
+    background: var(--bg-tertiary);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: var(--space-1);
+}
+
+.password-strength-fill {
+    height: 100%;
+    transition: width 0.3s ease, background-color 0.3s ease;
+    border-radius: 2px;
+}
+
+.password-strength-fill.weak {
+    background: var(--accent-danger);
+    width: 25%;
+}
+
+.password-strength-fill.fair {
+    background: #f59e0b;
+    width: 50%;
+}
+
+.password-strength-fill.good {
+    background: #10b981;
+    width: 75%;
+}
+
+.password-strength-fill.strong {
+    background: var(--accent-primary);
+    width: 100%;
+}
+
+.password-strength-text {
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+/* Token Input Styling */
+#resetToken {
+    font-family: var(--font-mono);
+    letter-spacing: 1px;
+    text-align: center;
+    font-size: 16px;
+}
+
+/* Responsive adjustments for forgot password */
+@media (max-width: 480px) {
+    .success-actions {
+        flex-direction: column;
+    }
+    
+    .success-actions .btn-secondary,
+    .success-actions .btn-primary {
+        width: 100%;
+    }
+    
+    .auth-tabs[data-steps="2"] .auth-tab {
+        font-size: 12px;
+        padding: var(--space-2);
     }
 }

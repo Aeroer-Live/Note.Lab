@@ -113,9 +113,11 @@ class TemplateManager {
         
         // Ensure preview functionality is maintained
         setTimeout(() => {
-            if (window.noteEditor) {
+            if (window.noteEditor && typeof window.noteEditor.bindPreviewEvents === 'function') {
                 // Re-bind preview events after toolbar change
                 window.noteEditor.bindPreviewEvents();
+            }
+            if (window.noteEditor && typeof window.noteEditor.updatePreview === 'function') {
                 window.noteEditor.updatePreview();
             }
         }, 100);
@@ -215,7 +217,7 @@ class TemplateManager {
     insertCodeBlock() {
         const text = `\`\`\`${this.currentLanguage}
 // Your code here
-console.log('Hello, World!');
+
 \`\`\`
 
 `;

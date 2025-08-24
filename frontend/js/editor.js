@@ -11,19 +11,28 @@ class NoteEditor {
     }
     
     init() {
-        // Initialize CodeMirror components
-        this.initializeEditor();
-        this.bindToolbarEvents();
-        this.bindPreviewEvents();
-        this.setupResizeHandle();
+        try {
+            // Initialize CodeMirror components
+            this.initializeEditor();
+            this.bindToolbarEvents();
+            this.bindPreviewEvents();
+            this.setupResizeHandle();
+        } catch (error) {
+            console.error('Error initializing editor:', error);
+        }
     }
     
     initializeEditor() {
         const textarea = document.getElementById('codeEditor');
         
+        if (!textarea) {
+            console.error('Textarea element not found');
+            return;
+        }
+        
         this.editor = CodeMirror.fromTextArea(textarea, {
             mode: 'markdown',
-            theme: 'github-dark',
+            theme: 'monokai',
             lineNumbers: true,
             lineWrapping: true,
             autoCloseBrackets: true,
@@ -75,44 +84,65 @@ class NoteEditor {
     }
     
     bindToolbarEvents() {
-        // Enhanced toolbar events
-        document.querySelectorAll('.toolbar-btn[data-action]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const action = btn.dataset.action;
-                this.handleToolbarAction(action);
-            });
-        });
-
-        // Dropdown functionality
-        document.querySelectorAll('.toolbar-dropdown').forEach(dropdown => {
-            const toggle = dropdown.querySelector('.dropdown-toggle');
-            const menu = dropdown.querySelector('.dropdown-menu');
+        try {
+            // Enhanced toolbar events
+            const toolbarButtons = document.querySelectorAll('.toolbar-btn[data-action]');
             
-            toggle.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                // Close other dropdowns
-                document.querySelectorAll('.dropdown-menu.show').forEach(m => {
-                    if (m !== menu) m.classList.remove('show');
+            if (toolbarButtons.length > 0) {
+                toolbarButtons.forEach((btn, index) => {
+                    if (btn) {
+                        btn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            const action = btn.dataset.action;
+                            this.handleToolbarAction(action);
+                        });
+                    }
                 });
-                
-                menu.classList.toggle('show');
-                toggle.classList.toggle('active');
-            });
+            }
 
-            // Handle dropdown menu clicks
-            menu.querySelectorAll('button[data-action]').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const action = btn.dataset.action;
-                    this.handleToolbarAction(action);
-                    menu.classList.remove('show');
-                    toggle.classList.remove('active');
+            // Dropdown functionality
+            const dropdowns = document.querySelectorAll('.toolbar-dropdown');
+            
+            if (dropdowns.length > 0) {
+                dropdowns.forEach((dropdown, index) => {
+                    const toggle = dropdown.querySelector('.dropdown-toggle');
+                    const menu = dropdown.querySelector('.dropdown-menu');
+                    
+                    if (toggle && menu) {
+                        toggle.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            
+                            // Close other dropdowns
+                            document.querySelectorAll('.dropdown-menu.show').forEach(m => {
+                                if (m !== menu) m.classList.remove('show');
+                            });
+                            
+                            menu.classList.toggle('show');
+                            toggle.classList.toggle('active');
+                        });
+
+                        // Handle dropdown menu clicks
+                        const menuButtons = menu.querySelectorAll('button[data-action]');
+                        if (menuButtons.length > 0) {
+                            menuButtons.forEach(btn => {
+                                if (btn) {
+                                    btn.addEventListener('click', (e) => {
+                                        e.preventDefault();
+                                        const action = btn.dataset.action;
+                                        this.handleToolbarAction(action);
+                                        menu.classList.remove('show');
+                                        toggle.classList.remove('active');
+                                    });
+                                }
+                            });
+                        }
+                    }
                 });
-            });
-        });
+            }
+        } catch (error) {
+            console.error('Error binding toolbar events:', error);
+        }
 
         // Close dropdowns when clicking outside
         document.addEventListener('click', () => {
@@ -127,27 +157,30 @@ class NoteEditor {
         // Remove existing event listeners first
         if (this.previewEventListeners) {
             this.previewEventListeners.forEach(({ element, listener }) => {
-                element.removeEventListener('click', listener);
+                if (element && element.removeEventListener) {
+                    element.removeEventListener('click', listener);
+                }
             });
         }
         this.previewEventListeners = [];
         
         // Handle all preview toggle buttons (in all toolbars)
         const previewButtons = document.querySelectorAll('.preview-toggle');
-        console.log('Found preview buttons:', previewButtons.length);
         
-        previewButtons.forEach((button, index) => {
-            console.log(`Binding preview button ${index}:`, button);
-            const listener = (e) => {
-                e.preventDefault();
-                console.log('Preview button clicked!');
-                this.togglePreview();
-            };
-            button.addEventListener('click', listener);
-            
-            // Store the listener for cleanup
-            this.previewEventListeners.push({ element: button, listener });
-        });
+        if (previewButtons.length > 0) {
+            previewButtons.forEach((button, index) => {
+                if (button) {
+                    const listener = (e) => {
+                        e.preventDefault();
+                        this.togglePreview();
+                    };
+                    button.addEventListener('click', listener);
+                    
+                    // Store the listener for cleanup
+                    this.previewEventListeners.push({ element: button, listener });
+                }
+            });
+        }
 
         // Handle mobile preview close button with multiple approaches
         this.setupPreviewCloseButton();
@@ -157,7 +190,6 @@ class NoteEditor {
             if (e.target.closest('#previewCloseBtn')) {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('Preview close button clicked (fallback)!');
                 this.togglePreview();
             }
         };
@@ -170,8 +202,6 @@ class NoteEditor {
         const bindCloseButtonEvents = (button) => {
             if (!button) return;
             
-            console.log('Setting up preview close button events');
-            
             // Remove any existing listeners to prevent duplicates
             button.removeEventListener('click', this.handlePreviewClose);
             button.removeEventListener('touchstart', this.handlePreviewClose);
@@ -181,7 +211,6 @@ class NoteEditor {
             this.handlePreviewClose = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('Preview close button activated!');
                 this.togglePreview();
             };
             
@@ -193,8 +222,6 @@ class NoteEditor {
             // Add visual feedback
             button.style.cursor = 'pointer';
             button.setAttribute('title', 'Close Preview');
-            
-            console.log('Preview close button events bound successfully');
         };
         
         // Try to bind immediately if button exists
@@ -210,13 +237,11 @@ class NoteEditor {
                     if (node.nodeType === Node.ELEMENT_NODE) {
                         // Check if the added node is the button
                         if (node.id === 'previewCloseBtn') {
-                            console.log('Preview close button added to DOM');
                             bindCloseButtonEvents(node);
                         }
                         // Check if the button is inside the added node
                         const button = node.querySelector('#previewCloseBtn');
                         if (button) {
-                            console.log('Preview close button found inside added node');
                             bindCloseButtonEvents(button);
                         }
                     }
@@ -316,22 +341,12 @@ class NoteEditor {
     }
 
     togglePreview() {
-        console.log('togglePreview called!');
         const previewPane = document.getElementById('previewPane');
         const resizeHandle = document.getElementById('resizeHandle');
         const editorPanes = document.querySelector('.editor-panes');
         const previewToggle = document.querySelector('.preview-toggle');
         const previewHeader = document.querySelector('.preview-header');
         const isMobile = window.innerWidth <= 768;
-        
-        console.log('Preview elements found:', {
-            previewPane: !!previewPane,
-            resizeHandle: !!resizeHandle,
-            editorPanes: !!editorPanes,
-            previewToggle: !!previewToggle,
-            previewHeader: !!previewHeader,
-            currentPreviewMode: this.previewMode
-        });
 
         if (!this.previewMode) {
             // Show preview
@@ -348,17 +363,14 @@ class NoteEditor {
             // Show mobile preview header on mobile
             if (isMobile && previewHeader) {
                 previewHeader.style.display = 'flex';
-                console.log('Mobile preview header shown');
                 
                 // Re-bind close button events after showing header
                 setTimeout(() => {
                     const closeBtn = document.getElementById('previewCloseBtn');
                     if (closeBtn) {
-                        console.log('Re-binding close button events');
                         closeBtn.addEventListener('click', (e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            console.log('Preview close button clicked (re-bound)!');
                             this.togglePreview();
                         });
                     }
@@ -380,7 +392,6 @@ class NoteEditor {
             // Hide mobile preview header
             if (previewHeader) {
                 previewHeader.style.display = 'none';
-                console.log('Mobile preview header hidden');
             }
             
             this.previewMode = false;
@@ -720,5 +731,21 @@ class EditorUtils {
 
 // Initialize editor when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    window.noteEditor = new NoteEditor();
+    // Check if user is authenticated before initializing editor
+    const session = localStorage.getItem('notelab_session');
+    const token = localStorage.getItem('notelab_token');
+    const user = localStorage.getItem('notelab_user');
+    
+    if (!session && !token) {
+        return;
+    }
+    
+    // Add a small delay to ensure all elements are properly loaded
+    setTimeout(() => {
+        try {
+            window.noteEditor = new NoteEditor();
+        } catch (error) {
+            console.error('Failed to initialize editor:', error);
+        }
+    }, 200);
 });

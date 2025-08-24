@@ -10,13 +10,20 @@
     "build:frontend": "mkdir -p dist && cp -r frontend/* dist/ && cp *.html dist/ && sed -i 's|frontend/|.|g' dist/*.html",
     "serve": "python3 -m http.server 8000"
   },
-  "keywords": ["notes", "developer", "markdown", "cloudflare"],
+  "keywords": [
+    "notes",
+    "developer",
+    "markdown",
+    "cloudflare"
+  ],
   "author": "Your Name",
   "license": "MIT",
   "devDependencies": {
     "wrangler": "^3.0.0"
   },
   "dependencies": {
-    "@cloudflare/workers-types": "^4.0.0"
+    "@cloudflare/workers-types": "^4.0.0",
+    "@tsndr/cloudflare-worker-jwt": "^2.5.4",
+    "itty-router": "^4.2.2"
   }
 }

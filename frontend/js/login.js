@@ -18,19 +18,23 @@ class LoginManager {
     }
     
     checkExistingSession() {
-        const session = localStorage.getItem('notelab_session');
-        if (session) {
+        const token = localStorage.getItem('notelab_token');
+        const user = localStorage.getItem('notelab_user');
+        
+        if (token && user) {
             try {
-                const sessionData = JSON.parse(session);
-                // Check if session is still valid
-                if (sessionData.expiresAt && sessionData.expiresAt > Date.now()) {
+                const userData = JSON.parse(user);
+                // For now, just check if we have valid data
+                // In production, you might want to validate the token with the server
+                if (userData.id && userData.email) {
                     // Redirect to main app
                     window.location.href = 'index.html';
                     return;
                 }
             } catch (e) {
                 // Invalid session data, remove it
-                localStorage.removeItem('notelab_session');
+                localStorage.removeItem('notelab_token');
+                localStorage.removeItem('notelab_user');
             }
         }
     }
@@ -51,10 +55,7 @@ class LoginManager {
             this.handleSubmit();
         });
         
-        // Demo button
-        document.getElementById('demoBtn').addEventListener('click', () => {
-            this.useDemoAccount();
-        });
+
         
         // Password toggle
         document.getElementById('passwordToggle').addEventListener('click', () => {
@@ -77,6 +78,20 @@ class LoginManager {
                 field.addEventListener('input', () => this.clearFieldError(fieldId));
             }
         });
+        
+        // Password strength indicator
+        const passwordField = document.getElementById('password');
+        if (passwordField) {
+            passwordField.addEventListener('input', () => this.checkPasswordStrength());
+            passwordField.addEventListener('focus', () => {
+                document.getElementById('passwordRequirements').style.display = 'block';
+            });
+            passwordField.addEventListener('blur', () => {
+                if (!passwordField.value) {
+                    document.getElementById('passwordRequirements').style.display = 'none';
+                }
+            });
+        }
         
         // Forgot password link
         document.querySelector('.forgot-link').addEventListener('click', (e) => {
@@ -204,6 +219,12 @@ class LoginManager {
                 document.getElementById('fullName').focus();
                 return false;
             }
+            
+            if (fullName.length > 50) {
+                this.showMessage('Full name must be less than 50 characters', 'error');
+                document.getElementById('fullName').focus();
+                return false;
+            }
         }
         
         // Email validation
@@ -226,8 +247,27 @@ class LoginManager {
             return false;
         }
         
-        if (password.length < 6) {
-            this.showMessage('Password must be at least 6 characters long', 'error');
+        if (password.length < 8) {
+            this.showMessage('Password must be at least 8 characters long', 'error');
+            document.getElementById('password').focus();
+            return false;
+        }
+        
+        if (password.length > 128) {
+            this.showMessage('Password must be less than 128 characters', 'error');
+            document.getElementById('password').focus();
+            return false;
+        }
+        
+        // Check for at least one letter and one number
+        if (!/[A-Za-z]/.test(password)) {
+            this.showMessage('Password must contain at least one letter', 'error');
+            document.getElementById('password').focus();
+            return false;
+        }
+        
+        if (!/\d/.test(password)) {
+            this.showMessage('Password must contain at least one number', 'error');
             document.getElementById('password').focus();
             return false;
         }
@@ -262,8 +302,16 @@ class LoginManager {
                 }
                 break;
             case 'password':
-                if (value && value.length < 6) {
-                    this.showFieldError(fieldId, 'Password too short');
+                if (value && value.length < 8) {
+                    this.showFieldError(fieldId, 'Password must be at least 8 characters');
+                    return false;
+                }
+                if (value && !/[A-Za-z]/.test(value)) {
+                    this.showFieldError(fieldId, 'Must contain at least one letter');
+                    return false;
+                }
+                if (value && !/\d/.test(value)) {
+                    this.showFieldError(fieldId, 'Must contain at least one number');
                     return false;
                 }
                 break;
@@ -318,59 +366,59 @@ class LoginManager {
     }
     
     async signIn(email, password, rememberMe) {
-        // Demo account check
-        if (email === 'demo@notelab.dev' && password === 'demo123') {
-            const user = {
-                id: 'demo-user',
-                email: email,
-                name: 'Demo User'
-            };
+        try {
+            const response = await window.api.login({ email, password });
             
-            this.setUserSession(user, rememberMe);
-            this.showMessage('Welcome back! Redirecting...', 'success');
+            if (response.success) {
+                const user = response.data.user;
+                this.setUserSession(user, rememberMe);
+                this.showMessage('Welcome back! Redirecting...', 'success');
+                
+                setTimeout(() => {
+                    window.location.href = '/index.html';
+                }, 1500);
+            } else {
+                throw new Error(response.message || 'Sign in failed');
+            }
+        } catch (error) {
+            console.error('Login error:', error);
             
-            setTimeout(() => {
-                window.location.href = '../index.html';
-            }, 1500);
+            // Provide more specific error messages
+            let errorMessage = 'Sign in failed. Please check your credentials.';
             
-            return;
-        }
-        
-        // Simulate API call for demo
-        const response = await this.simulateApiCall('/auth/signin', {
-            email,
-            password
-        });
-        
-        if (response.success) {
-            this.setUserSession(response.user, rememberMe);
-            this.showMessage('Welcome back! Redirecting...', 'success');
+            if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+                errorMessage = 'Invalid email or password. Please try again.';
+            } else if (error.message.includes('Network') || error.message.includes('fetch')) {
+                errorMessage = 'Network error. Please check your connection and try again.';
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
             
-            setTimeout(() => {
-                window.location.href = '../index.html';
-            }, 1500);
-        } else {
-            throw new Error(response.error || 'Sign in failed');
+            throw new Error(errorMessage);
         }
     }
     
     async signUp(fullName, email, password) {
-        // Simulate API call
-        const response = await this.simulateApiCall('/auth/signup', {
-            fullName,
-            email,
-            password
-        });
-        
-        if (response.success) {
-            this.setUserSession(response.user, false);
-            this.showMessage('Account created successfully! Redirecting...', 'success');
+        try {
+            const response = await window.api.register({
+                name: fullName,
+                email,
+                password
+            });
             
-            setTimeout(() => {
-                window.location.href = '../index.html';
-            }, 1500);
-        } else {
-            throw new Error(response.error || 'Sign up failed');
+            if (response.success) {
+                const user = response.data.user;
+                this.setUserSession(user, false);
+                this.showMessage('Account created successfully! Redirecting...', 'success');
+                
+                setTimeout(() => {
+                    window.location.href = '/index.html';
+                }, 1500);
+            } else {
+                throw new Error(response.message || 'Sign up failed');
+            }
+        } catch (error) {
+            throw new Error(error.message || 'Sign up failed. Please try again.');
         }
     }
     
@@ -410,46 +458,22 @@ class LoginManager {
     }
     
     setUserSession(user, rememberMe) {
-        const expirationTime = rememberMe ? 
-            (30 * 24 * 60 * 60 * 1000) : // 30 days
-            (7 * 24 * 60 * 60 * 1000);   // 7 days
-            
-        const sessionData = {
-            user,
-            timestamp: Date.now(),
-            expiresAt: Date.now() + expirationTime
-        };
+        // Store user data
+        localStorage.setItem('notelab_user', JSON.stringify(user));
         
+        // Create session data for app.js compatibility
+        const sessionData = {
+            user: user,
+            expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000), // 7 days
+            rememberMe: rememberMe
+        };
         localStorage.setItem('notelab_session', JSON.stringify(sessionData));
+        
+        // Token is already stored by the API config
+        // The API config handles token storage automatically
     }
     
-    useDemoAccount() {
-        document.getElementById('email').value = 'demo@notelab.dev';
-        document.getElementById('password').value = 'demo123';
-        
-        // Switch to sign in if on sign up
-        if (this.currentMode === 'signup') {
-            this.switchMode('signin');
-        }
-        
-        // Add visual feedback
-        const demoBtn = document.getElementById('demoBtn');
-        const originalText = demoBtn.innerHTML;
-        demoBtn.innerHTML = `
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 6L9 17l-5-5"/>
-            </svg>
-            Credentials filled!
-        `;
-        demoBtn.style.background = 'var(--accent-primary)';
-        demoBtn.style.color = 'white';
-        
-        setTimeout(() => {
-            demoBtn.innerHTML = originalText;
-            demoBtn.style.background = '';
-            demoBtn.style.color = '';
-        }, 2000);
-    }
+
     
     togglePasswordVisibility() {
         const passwordField = document.getElementById('password');
@@ -468,6 +492,71 @@ class LoginManager {
                 <circle cx="12" cy="12" r="3"/>
             `;
         }
+    }
+    
+    checkPasswordStrength() {
+        const password = document.getElementById('password').value;
+        const strengthBar = document.getElementById('passwordStrength');
+        const strengthFill = document.getElementById('strengthFill');
+        const strengthText = document.getElementById('strengthText');
+        
+        if (!password) {
+            strengthBar.style.display = 'none';
+            return;
+        }
+        
+        strengthBar.style.display = 'block';
+        
+        // Calculate strength based on backend requirements
+        let score = 0;
+        let feedback = '';
+        let isValid = true;
+        
+        // Basic requirements (must have all)
+        if (password.length >= 8) score += 1;
+        if (/[A-Za-z]/.test(password)) score += 1;
+        if (/\d/.test(password)) score += 1;
+        
+        // Bonus points
+        if (password.length >= 12) score += 1;
+        if (/[A-Z]/.test(password)) score += 1;
+        if (/[^A-Za-z0-9]/.test(password)) score += 1;
+        
+        // Check if meets minimum requirements
+        if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+            isValid = false;
+        }
+        
+        // Determine strength level
+        let strength = 'weak';
+        if (score >= 3 && isValid) strength = 'fair';
+        if (score >= 4 && isValid) strength = 'good';
+        if (score >= 5 && isValid) strength = 'strong';
+        
+        // Update UI
+        strengthFill.className = `strength-fill ${strength}`;
+        
+        if (!isValid) {
+            feedback = 'Must be 8+ chars with letters & numbers';
+            strengthFill.className = 'strength-fill weak';
+        } else {
+            switch (strength) {
+                case 'weak':
+                    feedback = 'Weak password';
+                    break;
+                case 'fair':
+                    feedback = 'Fair password';
+                    break;
+                case 'good':
+                    feedback = 'Good password';
+                    break;
+                case 'strong':
+                    feedback = 'Strong password';
+                    break;
+            }
+        }
+        
+        strengthText.textContent = feedback;
     }
     
     showForgotPassword() {
@@ -501,14 +590,25 @@ class LoginManager {
         messageEl.className = `auth-message auth-message-${type}`;
         messageEl.textContent = message;
         
+        // Add close button for error messages
+        if (type === 'error') {
+            const closeBtn = document.createElement('button');
+            closeBtn.innerHTML = '×';
+            closeBtn.className = 'message-close';
+            closeBtn.onclick = () => this.clearMessages();
+            messageEl.appendChild(closeBtn);
+        }
+        
         messageContainer.appendChild(messageEl);
         
-        // Auto-remove success messages
+        // Auto-remove success messages only
         if (type === 'success') {
             setTimeout(() => {
                 this.clearMessages();
             }, 3000);
         }
+        
+
     }
     
     clearMessages() {

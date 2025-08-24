@@ -18,7 +18,7 @@
                     <img src="frontend/assets/Image/Logo.png" alt="Note.Lab Logo" class="logo-image">
                     <h1 class="app-title">Note.Lab</h1>
                 </div>
-                <p class="login-subtitle">Developer-focused note-taking platform</p>
+                <p class="login-subtitle">Secure, cloud-based note-taking for developers</p>
             </div>
             
             <!-- Login Form -->
@@ -78,6 +78,17 @@
                                 </svg>
                             </button>
                         </div>
+                        <div class="password-strength" id="passwordStrength" style="display: none;">
+                            <div class="strength-bar">
+                                <div class="strength-fill" id="strengthFill"></div>
+                            </div>
+                            <span class="strength-text" id="strengthText">Password strength</span>
+                        </div>
+                        <div class="password-requirements" id="passwordRequirements" style="display: none;">
+                            <small class="requirements-text">
+                                Password must be at least 8 characters with letters and numbers
+                            </small>
+                        </div>
                     </div>
                     
                     <!-- Confirm Password field (only for signup) -->
@@ -99,7 +110,7 @@
                             <span class="checkmark"></span>
                             Remember me
                         </label>
-                        <a href="#" class="forgot-link">Forgot password?</a>
+                        <a href="forgot-password.html" class="forgot-link">Forgot password?</a>
                     </div>
                     
                     <!-- Submit Button -->
@@ -120,30 +131,13 @@
                     </button>
                 </form>
                 
-                <!-- Demo Account Info -->
-                <div class="demo-section">
-                    <div class="divider">
-                        <span class="divider-text">or</span>
-                    </div>
-                    <button type="button" class="btn-demo" id="demoBtn">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                            <circle cx="12" cy="7" r="4"/>
-                        </svg>
-                        Try Demo Account
-                    </button>
-                    <p class="demo-info">
-                        Demo credentials: <strong>demo@notelab.dev</strong> / <strong>demo123</strong>
-                    </p>
-                </div>
+
             </div>
             
             <!-- Footer -->
             <div class="login-footer">
-                <p>&copy; 2024 Note.Lab. Built for developers, by developers.</p>
+                <p>&copy; 2025 Note.Lab. Built for developers, by <a href="https://aeroer.live" target="_blank">Aeroer.Live</a>.</p>
                 <div class="footer-links">
-                    <a href="#" class="footer-link">Privacy Policy</a>
-                    <a href="#" class="footer-link">Terms of Service</a>
                     <a href="#" class="footer-link">GitHub</a>
                 </div>
             </div>
@@ -159,6 +153,7 @@
     </div>
     
     <!-- Scripts -->
+    <script src="frontend/js/api-config.js"></script>
     <script src="frontend/js/login.js"></script>
 </body>
 </html>

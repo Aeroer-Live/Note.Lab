@@ -7,7 +7,11 @@ class NoteApp {
         this.isAuthenticated = false;
         this.user = null;
         
-        this.init();
+        try {
+            this.init();
+        } catch (error) {
+            console.error('Error initializing app:', error);
+        }
     }
     
     init() {
@@ -18,7 +22,6 @@ class NoteApp {
             window.location.href = 'login.html';
             return;
         }
-        
         this.bindEvents();
         this.loadNotes();
         this.showWelcomeOrEditor();
@@ -26,6 +29,9 @@ class NoteApp {
     
     loadUserSession() {
         const session = localStorage.getItem('notelab_session');
+        const token = localStorage.getItem('notelab_token');
+        const user = localStorage.getItem('notelab_user');
+        
         if (session) {
             try {
                 const sessionData = JSON.parse(session);
@@ -43,6 +49,21 @@ class NoteApp {
             } catch (e) {
                 console.error('Invalid session data:', e);
                 localStorage.removeItem('notelab_session');
+                this.isAuthenticated = false;
+            }
+        } else {
+            // Fallback: check if we have token and user data
+            if (token && user) {
+                try {
+                    const userData = JSON.parse(user);
+                    this.isAuthenticated = true;
+                    this.user = userData;
+                    this.updateUserInfo();
+                } catch (e) {
+                    console.error('Invalid user data:', e);
+                    this.isAuthenticated = false;
+                }
+            } else {
                 this.isAuthenticated = false;
             }
         }
@@ -335,23 +356,36 @@ class NoteApp {
         }
     }
     
-    deleteNoteFromList(noteId) {
+    async deleteNoteFromList(noteId) {
         const note = this.notes.find(n => n.id === noteId);
         if (!note) return;
         
         if (confirm(`Are you sure you want to delete "${note.title}"?`)) {
-            // Remove from notes array
-            this.notes = this.notes.filter(n => n.id !== noteId);
-            
-            // If this was the currently selected note, clear selection
-            if (this.currentNote && this.currentNote.id === noteId) {
-                this.currentNote = null;
-                this.showWelcomeOrEditor();
+            try {
+                if (!window.api) {
+                    console.error('API not available');
+                    return;
+                }
+
+                const response = await window.api.deleteNote(noteId);
+                if (response.success) {
+                    // Remove from notes array
+                    this.notes = this.notes.filter(n => n.id !== noteId);
+                    
+                    // If this was the currently selected note, clear selection
+                    if (this.currentNote && this.currentNote.id === noteId) {
+                        this.currentNote = null;
+                        this.showWelcomeOrEditor();
+                    }
+                    
+                    // Update display
+                    this.displayNotes();
+                } else {
+                    console.error('Failed to delete note:', response.message);
+                }
+            } catch (error) {
+                console.error('Failed to delete note:', error);
             }
-            
-            // Save and update display
-            this.saveNotes();
-            this.displayNotes();
         }
     }
     
@@ -400,6 +434,20 @@ class NoteApp {
         this.currentNote.updatedAt = new Date().toISOString();
     }
     
+    showSaveStatus(message, type = 'success') {
+        const saveStatus = document.getElementById('saveStatus');
+        if (saveStatus) {
+            saveStatus.textContent = message;
+            saveStatus.className = `save-status ${type}`;
+            
+            // Auto-clear after 3 seconds
+            setTimeout(() => {
+                saveStatus.textContent = '';
+                saveStatus.className = 'save-status';
+            }, 3000);
+        }
+    }
+
     showSaveSuccessMessage() {
         // Create a temporary success message
         const message = document.createElement('div');
@@ -667,24 +715,84 @@ class NoteApp {
         }, 1000);
     }
     
-    saveNotes() {
+    async saveNotes() {
         try {
-            localStorage.setItem('notelab_notes', JSON.stringify(this.notes));
-        } catch (e) {
-            console.error('Failed to save notes:', e);
-            document.getElementById('saveStatus').textContent = 'Save failed';
-            document.getElementById('saveStatus').className = 'save-status error';
+            if (!this.currentNote) return;
+            
+            if (!window.api) {
+                console.error('API not available');
+                return;
+            }
+
+            const noteData = {
+                title: this.currentNote.title,
+                content: this.currentNote.content,
+                type: this.currentNote.type || 'standard',
+                starred: this.currentNote.starred || false,
+                tags: this.currentNote.tags || [],
+                metadata: this.currentNote.metadata || {}
+            };
+
+            let response;
+            if (this.currentNote.id) {
+                // Update existing note
+                response = await window.api.updateNote(this.currentNote.id, noteData);
+            } else {
+                // Create new note
+                response = await window.api.createNote(noteData);
+                if (response.success) {
+                    this.currentNote.id = response.data.note.id;
+                }
+            }
+
+            if (response.success) {
+                // Update the note in our local array
+                const noteIndex = this.notes.findIndex(n => n.id === this.currentNote.id);
+                if (noteIndex !== -1) {
+                    this.notes[noteIndex] = { ...this.currentNote, ...response.data.note };
+                } else {
+                    this.notes.push({ ...this.currentNote, ...response.data.note });
+                }
+                
+                this.updateNoteInList();
+                this.showSaveStatus('Saved successfully', 'success');
+            } else {
+                this.showSaveStatus('Save failed', 'error');
+            }
+        } catch (error) {
+            console.error('Failed to save note:', error);
+            this.showSaveStatus('Save failed', 'error');
         }
     }
     
-    loadNotes() {
+    async loadNotes() {
         try {
-            const saved = localStorage.getItem('notelab_notes');
-            if (saved) {
-                this.notes = JSON.parse(saved);
+            if (!window.api) {
+                console.error('API not available');
+                this.notes = [];
+                this.displayNotes();
+                return;
             }
-        } catch (e) {
-            console.error('Failed to load notes:', e);
+
+            const response = await window.api.getNotes();
+            if (response.success) {
+                this.notes = response.data.notes.map(note => ({
+                    id: note.id,
+                    title: note.title,
+                    content: note.content,
+                    type: note.type,
+                    starred: note.starred,
+                    tags: note.tags,
+                    metadata: note.metadata,
+                    createdAt: note.createdAt,
+                    updatedAt: note.updatedAt
+                }));
+            } else {
+                console.error('Failed to load notes:', response.message);
+                this.notes = [];
+            }
+        } catch (error) {
+            console.error('Failed to load notes:', error);
             this.notes = [];
         }
         
@@ -700,7 +808,10 @@ class NoteApp {
     }
     
     logout() {
+        // Clear all authentication data
         localStorage.removeItem('notelab_session');
+        localStorage.removeItem('notelab_token');
+        localStorage.removeItem('notelab_user');
         localStorage.removeItem('notelab_notes');
         
         this.isAuthenticated = false;
@@ -709,7 +820,7 @@ class NoteApp {
         this.currentNote = null;
         
         // Redirect to login page
-        window.location.href = '../login.html';
+        window.location.href = '/login.html';
     }
 
     bindMobileEvents() {

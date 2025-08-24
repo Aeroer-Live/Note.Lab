@@ -113,73 +113,55 @@ class AuthManager {
     }
     
     async login(email, password) {
-        // For now, use demo authentication
-        // In production, this would call the Cloudflare Workers API
-        
-        if (email === 'demo@notelab.dev' && password === 'demo123') {
-            const user = {
-                id: 'demo-user',
-                email: email,
-                name: 'Demo User'
-            };
-            
-            this.setUserSession(user);
-            this.showSuccess('Welcome back!');
-            
-            if (window.noteApp) {
-                window.noteApp.isAuthenticated = true;
-                window.noteApp.user = user;
-                window.noteApp.updateUserInfo();
-                window.noteApp.hideAuthModal();
-                window.noteApp.loadNotes();
-                window.noteApp.showWelcomeOrEditor();
-            }
-        } else {
-            // Simulate API call
-            const response = await this.simulateApiCall('/auth/login', {
-                email,
-                password
-            });
+        try {
+            const response = await window.api.login({ email, password });
             
             if (response.success) {
-                this.setUserSession(response.user);
+                const user = response.data.user;
+                this.setUserSession(user);
                 this.showSuccess('Welcome back!');
                 
                 if (window.noteApp) {
                     window.noteApp.isAuthenticated = true;
-                    window.noteApp.user = response.user;
+                    window.noteApp.user = user;
                     window.noteApp.updateUserInfo();
                     window.noteApp.hideAuthModal();
                     window.noteApp.loadNotes();
                     window.noteApp.showWelcomeOrEditor();
                 }
             } else {
-                throw new Error(response.error || 'Login failed');
+                throw new Error(response.message || 'Login failed');
             }
+        } catch (error) {
+            throw new Error(error.message || 'Login failed. Please check your credentials.');
         }
     }
     
     async register(username, email, password) {
-        // Simulate API call
-        const response = await this.simulateApiCall('/auth/register', {
-            username,
-            email,
-            password
-        });
-        
-        if (response.success) {
-            this.setUserSession(response.user);
-            this.showSuccess('Account created successfully!');
+        try {
+            const response = await window.api.register({
+                name: username,
+                email,
+                password
+            });
             
-            if (window.noteApp) {
-                window.noteApp.isAuthenticated = true;
-                window.noteApp.user = response.user;
-                window.noteApp.updateUserInfo();
-                window.noteApp.hideAuthModal();
-                window.noteApp.showWelcomeOrEditor();
+            if (response.success) {
+                const user = response.data.user;
+                this.setUserSession(user);
+                this.showSuccess('Account created successfully!');
+                
+                if (window.noteApp) {
+                    window.noteApp.isAuthenticated = true;
+                    window.noteApp.user = user;
+                    window.noteApp.updateUserInfo();
+                    window.noteApp.hideAuthModal();
+                    window.noteApp.showWelcomeOrEditor();
+                }
+            } else {
+                throw new Error(response.message || 'Registration failed');
             }
-        } else {
-            throw new Error(response.error || 'Registration failed');
+        } catch (error) {
+            throw new Error(error.message || 'Registration failed. Please try again.');
         }
     }
     
@@ -274,79 +256,34 @@ class AuthManager {
         }
     }
     
-    // Real API methods (for when Cloudflare Workers backend is ready)
-    async apiCall(endpoint, method = 'GET', data = null) {
-        const options = {
-            method,
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        };
-        
-        if (data) {
-            options.body = JSON.stringify(data);
-        }
-        
-        // Add auth token if available
-        const session = localStorage.getItem('notelab_session');
-        if (session) {
-            try {
-                const sessionData = JSON.parse(session);
-                options.headers['Authorization'] = `Bearer ${sessionData.token}`;
-            } catch (e) {
-                console.error('Invalid session data:', e);
-            }
-        }
-        
-        const response = await fetch(`${this.apiBase}${endpoint}`, options);
-        const result = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(result.error || 'API request failed');
-        }
-        
-        return result;
+    setUserSession(user) {
+        localStorage.setItem('notelab_user', JSON.stringify(user));
     }
     
-    async realLogin(email, password) {
-        const response = await this.apiCall('/auth/login', 'POST', {
-            email,
-            password
-        });
-        
-        if (response.token) {
-            const sessionData = {
-                user: response.user,
-                token: response.token,
-                timestamp: Date.now(),
-                expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000)
-            };
-            
-            localStorage.setItem('notelab_session', JSON.stringify(sessionData));
-        }
-        
-        return response;
+    getUserSession() {
+        const session = localStorage.getItem('notelab_user');
+        return session ? JSON.parse(session) : null;
     }
     
-    async realRegister(username, email, password) {
-        const response = await this.apiCall('/auth/register', 'POST', {
-            username,
-            email,
-            password
-        });
-        
-        if (response.token) {
-            const sessionData = {
-                user: response.user,
-                token: response.token,
-                timestamp: Date.now(),
-                expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000)
-            };
-            
-            localStorage.setItem('notelab_session', JSON.stringify(sessionData));
+    clearUserSession() {
+        localStorage.removeItem('notelab_user');
+    }
+    
+    logout() {
+        this.clearUserSession();
+        if (window.api) {
+            window.api.logout();
         }
         
-        return response;
+        if (window.noteApp) {
+            window.noteApp.isAuthenticated = false;
+            window.noteApp.user = null;
+            window.noteApp.notes = [];
+            window.noteApp.currentNote = null;
+        }
+        
+        // Redirect to login page
+        window.location.href = '/login.html';
     }
 }
 
