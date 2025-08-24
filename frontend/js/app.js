@@ -15,58 +15,54 @@ class NoteApp {
     }
     
     init() {
-        this.loadUserSession();
-        
-        if (!this.isAuthenticated) {
-            // Redirect to login page
-            window.location.href = 'login.html';
-            return;
-        }
-        this.bindEvents();
-        this.loadNotes();
-        this.showWelcomeOrEditor();
+        this.checkAuthentication();
     }
     
-    loadUserSession() {
-        const session = localStorage.getItem('notelab_session');
-        const token = localStorage.getItem('notelab_token');
-        const user = localStorage.getItem('notelab_user');
-        
-        if (session) {
-            try {
-                const sessionData = JSON.parse(session);
+    async checkAuthentication() {
+        try {
+            // Check if we have a token
+            const token = localStorage.getItem('notelab_token');
+            
+            if (!token) {
+                console.log('No token found, redirecting to login');
+                this.redirectToLogin();
+                return;
+            }
+            
+            console.log('Token found, verifying with backend...');
+            
+            // Verify token with backend
+            const response = await window.api.getProfile();
+            
+            if (response.success) {
+                this.isAuthenticated = true;
+                this.user = response.data.user;
+                this.updateUserInfo();
+                console.log('Authentication verified successfully');
                 
-                // Check if session is still valid
-                if (sessionData.expiresAt && sessionData.expiresAt > Date.now()) {
-                    this.isAuthenticated = true;
-                    this.user = sessionData.user;
-                    this.updateUserInfo();
-                } else {
-                    // Session expired, remove it
-                    localStorage.removeItem('notelab_session');
-                    this.isAuthenticated = false;
-                }
-            } catch (e) {
-                console.error('Invalid session data:', e);
-                localStorage.removeItem('notelab_session');
-                this.isAuthenticated = false;
-            }
-        } else {
-            // Fallback: check if we have token and user data
-            if (token && user) {
-                try {
-                    const userData = JSON.parse(user);
-                    this.isAuthenticated = true;
-                    this.user = userData;
-                    this.updateUserInfo();
-                } catch (e) {
-                    console.error('Invalid user data:', e);
-                    this.isAuthenticated = false;
-                }
+                // Initialize the app
+                this.bindEvents();
+                this.loadNotes();
+                this.showWelcomeOrEditor();
             } else {
-                this.isAuthenticated = false;
+                console.log('Authentication failed:', response.message);
+                this.redirectToLogin();
             }
+        } catch (error) {
+            console.error('Authentication check failed:', error);
+            this.redirectToLogin();
         }
+    }
+    
+    redirectToLogin() {
+        // Clear any invalid data
+        localStorage.removeItem('notelab_token');
+        localStorage.removeItem('notelab_user');
+        localStorage.removeItem('notelab_session');
+        localStorage.removeItem('notelab_notes');
+        
+        // Redirect to login
+        window.location.href = '/login.html';
     }
     
     bindEvents() {
@@ -158,9 +154,10 @@ class NoteApp {
     
     createNewNote() {
         const note = {
-            id: this.generateId(),
+            id: 'temp_' + this.generateId(), // Use temporary ID until saved
             title: 'Untitled note',
             content: '',
+            type: 'standard',
             starred: false,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -170,7 +167,6 @@ class NoteApp {
         this.notes.unshift(note);
         this.selectNote(note);
         this.displayNotes();
-        this.saveNotes();
         
         // Close mobile menu if on mobile
         if (window.innerWidth <= 768) {
@@ -182,6 +178,8 @@ class NoteApp {
             document.getElementById('noteTitle').focus();
             document.getElementById('noteTitle').select();
         }, 100);
+        
+        console.log('Created new temporary note:', note.id);
     }
 
     createNoteFromTemplate(templateType) {
@@ -189,7 +187,7 @@ class NoteApp {
         const template = templates[templateType] || templates.blank;
         
         const note = {
-            id: this.generateId(),
+            id: 'temp_' + this.generateId(), // Use temporary ID until saved
             title: template.title,
             content: template.content,
             type: templateType,
@@ -202,7 +200,6 @@ class NoteApp {
         this.notes.unshift(note);
         this.selectNote(note);
         this.displayNotes();
-        this.saveNotes();
         
         // Close mobile menu if on mobile
         if (window.innerWidth <= 768) {
@@ -214,6 +211,8 @@ class NoteApp {
             document.getElementById('noteTitle').focus();
             document.getElementById('noteTitle').select();
         }, 100);
+        
+        console.log('Created new note from template:', templateType, note.id);
     }
 
     getTemplateContent() {
@@ -721,6 +720,7 @@ class NoteApp {
             
             if (!window.api) {
                 console.error('API not available');
+                this.showSaveStatus('API not available', 'error');
                 return;
             }
 
@@ -734,14 +734,23 @@ class NoteApp {
             };
 
             let response;
-            if (this.currentNote.id) {
+            if (this.currentNote.id && this.currentNote.id.startsWith('temp_')) {
+                // This is a temporary note, create new
+                response = await window.api.createNote(noteData);
+                if (response.success) {
+                    this.currentNote.id = response.data.note.id;
+                    console.log('Created new note with ID:', this.currentNote.id);
+                }
+            } else if (this.currentNote.id) {
                 // Update existing note
                 response = await window.api.updateNote(this.currentNote.id, noteData);
+                console.log('Updated existing note:', this.currentNote.id);
             } else {
                 // Create new note
                 response = await window.api.createNote(noteData);
                 if (response.success) {
                     this.currentNote.id = response.data.note.id;
+                    console.log('Created new note with ID:', this.currentNote.id);
                 }
             }
 
@@ -756,12 +765,14 @@ class NoteApp {
                 
                 this.updateNoteInList();
                 this.showSaveStatus('Saved successfully', 'success');
+                console.log('Note saved successfully');
             } else {
-                this.showSaveStatus('Save failed', 'error');
+                console.error('Save failed:', response.message);
+                this.showSaveStatus('Save failed: ' + (response.message || 'Unknown error'), 'error');
             }
         } catch (error) {
             console.error('Failed to save note:', error);
-            this.showSaveStatus('Save failed', 'error');
+            this.showSaveStatus('Save failed: ' + error.message, 'error');
         }
     }
     
@@ -771,6 +782,20 @@ class NoteApp {
                 console.error('API not available');
                 this.notes = [];
                 this.displayNotes();
+                return;
+            }
+
+            // First, verify authentication is still valid
+            try {
+                const profileResponse = await window.api.getProfile();
+                if (!profileResponse.success) {
+                    console.error('Authentication failed, redirecting to login');
+                    this.logout();
+                    return;
+                }
+            } catch (authError) {
+                console.error('Authentication check failed:', authError);
+                this.logout();
                 return;
             }
 
@@ -787,13 +812,20 @@ class NoteApp {
                     createdAt: note.createdAt,
                     updatedAt: note.updatedAt
                 }));
+                console.log(`Loaded ${this.notes.length} notes from server`);
             } else {
                 console.error('Failed to load notes:', response.message);
-                this.notes = [];
+                // Don't clear notes array on API error, keep existing notes
+                if (this.notes.length === 0) {
+                    this.notes = [];
+                }
             }
         } catch (error) {
             console.error('Failed to load notes:', error);
-            this.notes = [];
+            // Don't clear notes array on network error, keep existing notes
+            if (this.notes.length === 0) {
+                this.notes = [];
+            }
         }
         
         this.displayNotes();
@@ -809,9 +841,9 @@ class NoteApp {
     
     logout() {
         // Clear all authentication data
-        localStorage.removeItem('notelab_session');
         localStorage.removeItem('notelab_token');
         localStorage.removeItem('notelab_user');
+        localStorage.removeItem('notelab_session');
         localStorage.removeItem('notelab_notes');
         
         this.isAuthenticated = false;

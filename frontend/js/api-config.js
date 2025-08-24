@@ -118,7 +118,12 @@ class APIConfig {
 
     // User profile methods
     async getProfile() {
-        return this.request('/user/profile');
+        const response = await this.request('/user/profile');
+        // The backend returns user data directly, wrap it in success format
+        return {
+            success: true,
+            data: response
+        };
     }
 
     async updateProfile(profileData) {

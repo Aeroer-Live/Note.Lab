@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Note.Lab Debug</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #0d1117;
+            color: #c9d1d9;
+        }
+        .debug-section {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .debug-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #58a6ff;
+        }
+        .debug-content {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status {
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin: 5px 0;
+            font-weight: 500;
+        }
+        .status.success { background: #238636; color: white; }
+        .status.error { background: #da3633; color: white; }
+        .status.warning { background: #f0883e; color: white; }
+        .status.info { background: #58a6ff; color: white; }
+        button {
+            background: #238636;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        button:hover { background: #2ea043; }
+        button:disabled { background: #30363d; cursor: not-allowed; }
+        .test-results {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Note.Lab Debug Console</h1>
+    
+    <div class="debug-section">
+        <div class="debug-title">Authentication Status</div>
+        <div id="authStatus" class="status info">Checking...</div>
+        <button onclick="checkAuth()">Check Authentication</button>
+        <button onclick="logout()">Logout</button>
+    </div>
+
+    <div class="debug-section">
+        <div class="debug-title">Notes API Test</div>
+        <div id="notesStatus" class="status info">Ready to test</div>
+        <button onclick="testNotesAPI()">Test Notes API</button>
+        <button onclick="createTestNote()">Create Test Note</button>
+        <button onclick="loadNotes()">Load Notes</button>
+        <div id="notesResults" class="test-results"></div>
+    </div>
+
+    <div class="debug-section">
+        <div class="debug-title">Local Storage</div>
+        <div id="localStorageContent" class="debug-content">Loading...</div>
+        <button onclick="refreshLocalStorage()">Refresh</button>
+        <button onclick="clearLocalStorage()">Clear All</button>
+    </div>
+
+    <div class="debug-section">
+        <div class="debug-title">Console Output</div>
+        <div id="consoleOutput" class="debug-content">Debug output will appear here...</div>
+        <button onclick="clearConsole()">Clear Console</button>
+    </div>
+
+    <script src="frontend/js/api-config.js"></script>
+    <script>
+        // Capture console output
+        const originalLog = console.log;
+        const originalError = console.error;
+        const consoleOutput = document.getElementById('consoleOutput');
+        
+        function addToConsole(type, ...args) {
+            const timestamp = new Date().toLocaleTimeString();
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+            
+            consoleOutput.textContent += `[${timestamp}] ${type.toUpperCase()}: ${message}\n`;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+        
+        console.log = (...args) => {
+            originalLog.apply(console, args);
+            addToConsole('log', ...args);
+        };
+        
+        console.error = (...args) => {
+            originalError.apply(console, args);
+            addToConsole('error', ...args);
+        };
+
+        // Debug functions
+        async function checkAuth() {
+            const authStatus = document.getElementById('authStatus');
+            authStatus.textContent = 'Checking authentication...';
+            authStatus.className = 'status info';
+            
+            try {
+                if (!window.api) {
+                    throw new Error('API not available');
+                }
+                
+                const response = await window.api.getProfile();
+                if (response.success) {
+                    authStatus.textContent = `✅ Authenticated as ${response.data.user.name || response.data.user.email}`;
+                    authStatus.className = 'status success';
+                } else {
+                    authStatus.textContent = '❌ Authentication failed';
+                    authStatus.className = 'status error';
+                }
+            } catch (error) {
+                authStatus.textContent = `❌ Auth error: ${error.message}`;
+                authStatus.className = 'status error';
+            }
+        }
+
+        async function testNotesAPI() {
+            const notesStatus = document.getElementById('notesStatus');
+            const results = document.getElementById('notesResults');
+            
+            notesStatus.textContent = 'Testing Notes API...';
+            notesStatus.className = 'status info';
+            results.innerHTML = '';
+            
+            try {
+                if (!window.api) {
+                    throw new Error('API not available');
+                }
+                
+                const response = await window.api.getNotes();
+                if (response.success) {
+                    notesStatus.textContent = `✅ Notes API working - ${response.data.notes.length} notes found`;
+                    notesStatus.className = 'status success';
+                    results.innerHTML = `<div class="status info">Notes loaded successfully</div>`;
+                } else {
+                    notesStatus.textContent = '❌ Notes API failed';
+                    notesStatus.className = 'status error';
+                    results.innerHTML = `<div class="status error">Error: ${response.message}</div>`;
+                }
+            } catch (error) {
+                notesStatus.textContent = '❌ Notes API error';
+                notesStatus.className = 'status error';
+                results.innerHTML = `<div class="status error">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function createTestNote() {
+            const notesStatus = document.getElementById('notesStatus');
+            const results = document.getElementById('notesResults');
+            
+            notesStatus.textContent = 'Creating test note...';
+            notesStatus.className = 'status info';
+            
+            try {
+                if (!window.api) {
+                    throw new Error('API not available');
+                }
+                
+                const testNote = {
+                    title: 'Debug Test Note',
+                    content: 'This is a test note created at ' + new Date().toISOString(),
+                    type: 'standard',
+                    starred: false,
+                    tags: ['debug', 'test'],
+                    metadata: { debug: true }
+                };
+                
+                const response = await window.api.createNote(testNote);
+                if (response.success) {
+                    notesStatus.textContent = '✅ Test note created successfully';
+                    notesStatus.className = 'status success';
+                    results.innerHTML = `<div class="status success">Note created with ID: ${response.data.note.id}</div>`;
+                } else {
+                    notesStatus.textContent = '❌ Failed to create test note';
+                    notesStatus.className = 'status error';
+                    results.innerHTML = `<div class="status error">Error: ${response.message}</div>`;
+                }
+            } catch (error) {
+                notesStatus.textContent = '❌ Create note error';
+                notesStatus.className = 'status error';
+                results.innerHTML = `<div class="status error">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function loadNotes() {
+            const notesStatus = document.getElementById('notesStatus');
+            const results = document.getElementById('notesResults');
+            
+            notesStatus.textContent = 'Loading notes...';
+            notesStatus.className = 'status info';
+            
+            try {
+                if (!window.api) {
+                    throw new Error('API not available');
+                }
+                
+                const response = await window.api.getNotes();
+                if (response.success) {
+                    notesStatus.textContent = `✅ Loaded ${response.data.notes.length} notes`;
+                    notesStatus.className = 'status success';
+                    
+                    const notesList = response.data.notes.map(note => 
+                        `- ${note.title} (${note.type}) - ${new Date(note.updatedAt).toLocaleString()}`
+                    ).join('\n');
+                    
+                    results.innerHTML = `<div class="status info">Notes:\n${notesList}</div>`;
+                } else {
+                    notesStatus.textContent = '❌ Failed to load notes';
+                    notesStatus.className = 'status error';
+                    results.innerHTML = `<div class="status error">Error: ${response.message}</div>`;
+                }
+            } catch (error) {
+                notesStatus.textContent = '❌ Load notes error';
+                notesStatus.className = 'status error';
+                results.innerHTML = `<div class="status error">Error: ${error.message}</div>`;
+            }
+        }
+
+        function refreshLocalStorage() {
+            const content = document.getElementById('localStorageContent');
+            const keys = ['notelab_token', 'notelab_user', 'notelab_session', 'notelab_notes'];
+            
+            let output = '';
+            keys.forEach(key => {
+                const value = localStorage.getItem(key);
+                output += `${key}:\n`;
+                if (value) {
+                    try {
+                        const parsed = JSON.parse(value);
+                        output += JSON.stringify(parsed, null, 2);
+                    } catch (e) {
+                        output += value;
+                    }
+                } else {
+                    output += '  (not set)\n';
+                }
+                output += '\n\n';
+            });
+            
+            content.textContent = output;
+        }
+
+        function clearLocalStorage() {
+            if (confirm('Are you sure you want to clear all local storage? This will log you out.')) {
+                localStorage.clear();
+                refreshLocalStorage();
+                console.log('Local storage cleared');
+            }
+        }
+
+        function logout() {
+            if (window.api) {
+                window.api.logout();
+            }
+            localStorage.clear();
+            window.location.href = '/login.html';
+        }
+
+        function clearConsole() {
+            consoleOutput.textContent = '';
+        }
+
+        // Auto-refresh localStorage on load
+        refreshLocalStorage();
+        
+        // Auto-check auth on load
+        setTimeout(checkAuth, 1000);
+    </script>
+</body>
+</html>

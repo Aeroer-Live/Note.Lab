@@ -1,6 +1,7 @@
 // Authentication middleware for Cloudflare Workers
 import jwt from '@tsndr/cloudflare-worker-jwt';
 import { corsHeaders } from '../utils/cors';
+import { PasswordHasher } from '../utils/security';
 
 export async function verifyToken(request, env, ctx) {
     try {
@@ -70,20 +71,6 @@ export async function generateToken(user, env) {
     return await jwt.sign(payload, secret);
 }
 
-export function hashPassword(password) {
-    // In production, use proper password hashing like bcrypt
-    // For demo purposes, using simple hash
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password + 'notelab-salt');
-    return crypto.subtle.digest('SHA-256', data)
-        .then(hash => {
-            return Array.from(new Uint8Array(hash))
-                .map(b => b.toString(16).padStart(2, '0'))
-                .join('');
-        });
-}
-
-export async function verifyPassword(password, hashedPassword) {
-    const hash = await hashPassword(password);
-    return hash === hashedPassword;
-}
+// Use the correct password hashing from security.js
+export const hashPassword = PasswordHasher.hashPassword;
+export const verifyPassword = PasswordHasher.verifyPassword;

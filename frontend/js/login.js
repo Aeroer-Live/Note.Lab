@@ -7,7 +7,7 @@ class LoginManager {
     }
     
     init() {
-        // Check if already authenticated
+        // Check if already authenticated by verifying with backend
         this.checkExistingSession();
         
         // Bind events
@@ -17,24 +17,22 @@ class LoginManager {
         this.updateFormState();
     }
     
-    checkExistingSession() {
+    async checkExistingSession() {
         const token = localStorage.getItem('notelab_token');
-        const user = localStorage.getItem('notelab_user');
         
-        if (token && user) {
+        if (token) {
             try {
-                const userData = JSON.parse(user);
-                // For now, just check if we have valid data
-                // In production, you might want to validate the token with the server
-                if (userData.id && userData.email) {
-                    // Redirect to main app
+                // Verify token with backend
+                const response = await window.api.getProfile();
+                if (response.success) {
+                    // Valid session, redirect to main app
                     window.location.href = 'index.html';
                     return;
                 }
-            } catch (e) {
-                // Invalid session data, remove it
+            } catch (error) {
+                // Invalid token, remove it
+                console.log('Invalid token, removing');
                 localStorage.removeItem('notelab_token');
-                localStorage.removeItem('notelab_user');
             }
         }
     }
@@ -371,12 +369,22 @@ class LoginManager {
             
             if (response.success) {
                 const user = response.data.user;
+                
+                // Ensure token is stored before redirecting
+                if (response.data.token) {
+                    localStorage.setItem('notelab_token', response.data.token);
+                    console.log('Token stored successfully');
+                } else {
+                    throw new Error('No token received from server');
+                }
+                
                 this.setUserSession(user, rememberMe);
                 this.showMessage('Welcome back! Redirecting...', 'success');
                 
+                // Add a small delay to ensure token is stored
                 setTimeout(() => {
                     window.location.href = '/index.html';
-                }, 1500);
+                }, 1000);
             } else {
                 throw new Error(response.message || 'Sign in failed');
             }
@@ -408,12 +416,22 @@ class LoginManager {
             
             if (response.success) {
                 const user = response.data.user;
+                
+                // Ensure token is stored before redirecting
+                if (response.data.token) {
+                    localStorage.setItem('notelab_token', response.data.token);
+                    console.log('Token stored successfully');
+                } else {
+                    throw new Error('No token received from server');
+                }
+                
                 this.setUserSession(user, false);
                 this.showMessage('Account created successfully! Redirecting...', 'success');
                 
+                // Add a small delay to ensure token is stored
                 setTimeout(() => {
                     window.location.href = '/index.html';
-                }, 1500);
+                }, 1000);
             } else {
                 throw new Error(response.message || 'Sign up failed');
             }
@@ -458,19 +476,9 @@ class LoginManager {
     }
     
     setUserSession(user, rememberMe) {
-        // Store user data
-        localStorage.setItem('notelab_user', JSON.stringify(user));
-        
-        // Create session data for app.js compatibility
-        const sessionData = {
-            user: user,
-            expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000), // 7 days
-            rememberMe: rememberMe
-        };
-        localStorage.setItem('notelab_session', JSON.stringify(sessionData));
-        
-        // Token is already stored by the API config
-        // The API config handles token storage automatically
+        // Only store the token - everything else comes from the backend
+        // The API config already handles token storage automatically
+        console.log('User session established - token stored by API config');
     }
     
 
