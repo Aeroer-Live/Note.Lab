@@ -82,6 +82,14 @@
                 </ul>
             </div>
             
+            <div class="sidebar-tags" id="sidebarTags" hidden>
+                <div class="sidebar-tags-header">
+                    <span>Tags</span>
+                    <button type="button" class="sidebar-tags-clear" id="clearTagFilter" hidden>Clear filter</button>
+                </div>
+                <div class="sidebar-tag-list" id="sidebarTagList"></div>
+            </div>
+
             <div class="sidebar-notes" id="notesList">
                 <!-- Category Sections -->
                 <div class="notes-category" id="planNotesSection">
@@ -243,6 +251,15 @@
                         </svg>
                     </button>
                 </div>
+                </div>
+
+                <div class="note-tags" id="noteTags">
+                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                        <path d="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586V2zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
+                    </svg>
+                    <ul class="tag-list" id="noteTagList" aria-label="Tags"></ul>
+                    <input type="text" class="tag-input" id="noteTagInput" maxlength="50" placeholder="Add tags…" aria-label="Add tag" list="tagSuggestions" autocomplete="off">
+                    <datalist id="tagSuggestions"></datalist>
                 </div>
                 
                 <div class="editor-toolbar">
@@ -723,10 +740,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.2.0/diff.min.js"></script>
     <script src="frontend/js/api-config.js"></script>
     <script src="frontend/js/vault.js"></script>
+    <script src="frontend/js/markdown-render.js"></script>
     <script src="frontend/js/app.js"></script>
     <script src="frontend/js/editor.js"></script>
     <script src="frontend/js/templates.js"></script>
     <script src="frontend/js/note-io.js"></script>
     <script src="frontend/js/history.js"></script>
+    <script src="frontend/js/tags.js"></script>
 </body>
 </html>

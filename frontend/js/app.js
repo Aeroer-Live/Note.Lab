@@ -4,7 +4,8 @@ class NoteApp {
         this.notes = [];
         this.currentNote = null;
         this.currentView = 'all';
-        this.isAuthenticated = false;
+        this.activeTag = null;
+this.isAuthenticated = false;
         this.user = null;
         
         try {
@@ -149,7 +150,8 @@ class NoteApp {
     
     switchView(view) {
         this.currentView = view;
-        
+        this.activeTag = null;
+
         // Update active nav item
         document.querySelectorAll('.nav-item').forEach(item => {
             item.classList.remove('active');
@@ -324,6 +326,10 @@ class NoteApp {
             window.noteEditor.updatePreview();
         }
         
+        if (window.noteTags) {
+            window.noteTags.renderEditor(this.currentNote);
+        }
+
         this.updateWordCount();
     }
     
@@ -554,10 +560,17 @@ class NoteApp {
             return;
         }
         
-        const filteredNotes = this.notes.filter(note => 
-            note.title.toLowerCase().includes(query.toLowerCase()) ||
-            note.content.toLowerCase().includes(query.toLowerCase())
-        );
+        // "#name" searches tags only
+        const needle = query.trim().toLowerCase();
+        const tagOnly = needle.startsWith('#');
+        const tagNeedle = needle.replace(/^#+/, '');
+        const filteredNotes = this.notes.filter(note => {
+            const tagMatch = (note.tags || []).some(tag => tag.toLowerCase().includes(tagNeedle));
+            if (tagOnly) return tagMatch;
+            return tagMatch ||
+                note.title.toLowerCase().includes(needle) ||
+                (note.content || '').toLowerCase().includes(needle);
+        });
         
         this.displayFilteredNotes(filteredNotes);
     }
@@ -576,7 +589,15 @@ class NoteApp {
                 break;
             // 'all' shows everything
         }
-        
+
+        if (this.activeTag) {
+            const tag = this.activeTag.toLowerCase();
+            notesToShow = notesToShow.filter(note => (note.tags || []).some(t => t.toLowerCase() === tag));
+        }
+        if (window.noteTags) {
+            window.noteTags.renderSidebar();
+        }
+
         this.displayNotesByCategory(notesToShow);
     }
     
@@ -637,6 +658,8 @@ class NoteApp {
                         <div class="note-item-meta">
                             <span class="note-item-time">${this.formatTime(note.updatedAt)}</span>
                             ${note.starred ? '<span class="note-starred">★</span>' : ''}
+                            ${(note.tags || []).slice(0, 3).map(tag => `<span class="note-item-tag">${this.escapeHtml(tag)}</span>`).join('')}
+                            ${(note.tags || []).length > 3 ? `<span class="note-item-tag more">+${note.tags.length - 3}</span>` : ''}
                         </div>
                     </div>
                     <button class="note-delete-btn" data-note-id="${note.id}" title="Delete note">

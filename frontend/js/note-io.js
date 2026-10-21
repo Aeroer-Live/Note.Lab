@@ -24,6 +24,9 @@ const PRINT_STYLES = `
     th, td { border: 1px solid #d0d7de; padding: 6px 12px; text-align: left; }
     th { background: #f6f8fa; }
     img { max-width: 100%; }
+    .mermaid-diagram { text-align: center; margin: 0 0 1em; break-inside: avoid; }
+    .mermaid-diagram svg { max-width: 100%; height: auto; }
+    .mermaid-diagram.error { color: #cf222e; text-align: left; font-family: ui-monospace, monospace; font-size: 0.9em; }
     hr { border: 0; border-top: 1px solid #d0d7de; }
 `;
 
@@ -134,7 +137,7 @@ class NoteIO {
 
     // Renders the note as a clean light document and opens the browser's print dialog,
     // where "Save as PDF" produces a text PDF (selectable and searchable)
-    exportPdf(note) {
+    async exportPdf(note) {
         if (!note) return;
         if (!window.marked || !window.DOMPurify) {
             this.app.showToast('PDF export is unavailable: the Markdown renderer did not load', 'error');
@@ -142,7 +145,8 @@ class NoteIO {
         }
 
         const title = note.title || 'Untitled note';
-        const body = DOMPurify.sanitize(marked.parse(note.content || ''));
+        // Light diagram theme to match the printed page
+        const body = await window.noteMarkdown.renderToHtml(note.content || '', { theme: 'default' });
         const html = `<!doctype html><html><head><meta charset="utf-8"><title>${this.app.escapeHtml(title)}</title>` +
             `<style>${PRINT_STYLES}</style></head><body><h1 class="doc-title">${this.app.escapeHtml(title)}</h1>${body}</body></html>`;
 

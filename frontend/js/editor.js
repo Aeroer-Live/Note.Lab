@@ -425,17 +425,8 @@ class NoteEditor {
             `;
         } else {
             try {
-                const html = marked.parse(content);
-                // Sanitize rendered markdown to prevent XSS; refuse to render if DOMPurify failed to load
-                if (!window.DOMPurify) {
-                    throw new Error('DOMPurify not loaded');
-                }
-                previewContent.innerHTML = DOMPurify.sanitize(html);
-                
-                // Highlight code blocks if Prism is available
-                if (window.Prism) {
-                    window.Prism.highlightAllUnder(previewContent);
-                }
+                // Sanitized HTML, highlighting, Mermaid diagrams and copy buttons
+                window.noteMarkdown.renderInto(previewContent, content, { theme: 'dark', interactive: true });
             } catch (error) {
                 console.error('Markdown parsing error:', error);
                 previewContent.innerHTML = `<p style="color: var(--accent-danger);">Error parsing markdown</p>`;
