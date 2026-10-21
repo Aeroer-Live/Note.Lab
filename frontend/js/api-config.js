@@ -179,6 +179,28 @@ class APIConfig {
         });
     }
 
+    // Version history methods
+    async getNoteVersions(noteId) {
+        return this.request(`/notes/${noteId}/versions`);
+    }
+
+    async getNoteVersion(noteId, versionId) {
+        return this.request(`/notes/${noteId}/versions/${versionId}`);
+    }
+
+    async commitNoteVersion(noteId, message) {
+        return this.request(`/notes/${noteId}/versions`, {
+            method: 'POST',
+            body: JSON.stringify({ message })
+        });
+    }
+
+    async restoreNoteVersion(noteId, versionId) {
+        return this.request(`/notes/${noteId}/versions/${versionId}/restore`, {
+            method: 'POST'
+        });
+    }
+
     // Categories methods
     async getCategories() {
         return this.request('/categories');

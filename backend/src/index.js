@@ -5,6 +5,7 @@ import { AuthHandler } from './handlers/auth';
 import { NotesHandler } from './handlers/notes';
 import { NotesEnhancedHandler } from './handlers/notes-enhanced';
 import { CategoriesHandler } from './handlers/categories';
+import { VersionsHandler } from './handlers/versions';
 import { verifyToken } from './middleware/auth';
 import { RateLimiter, createRateLimitResponse } from './utils/security';
 
@@ -50,6 +51,12 @@ router.get('/api/notes/stats', rateLimitMiddleware, verifyToken, NotesEnhancedHa
 router.get('/api/notes/:id', rateLimitMiddleware, verifyToken, NotesEnhancedHandler.get);
 router.put('/api/notes/:id', rateLimitMiddleware, verifyToken, NotesEnhancedHandler.update);
 router.delete('/api/notes/:id', rateLimitMiddleware, verifyToken, NotesEnhancedHandler.delete);
+
+// Version history routes
+router.get('/api/notes/:id/versions', rateLimitMiddleware, verifyToken, VersionsHandler.list);
+router.post('/api/notes/:id/versions', rateLimitMiddleware, verifyToken, VersionsHandler.commit);
+router.get('/api/notes/:id/versions/:versionId', rateLimitMiddleware, verifyToken, VersionsHandler.get);
+router.post('/api/notes/:id/versions/:versionId/restore', rateLimitMiddleware, verifyToken, VersionsHandler.restore);
 
 // Categories routes
 router.get('/api/categories', rateLimitMiddleware, verifyToken, CategoriesHandler.list);

@@ -508,6 +508,17 @@ class NoteApp {
         }, 3000);
     }
     
+    // Short message that stays visible whether or not the editor is open
+    showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `app-toast ${type}`;
+        toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        setTimeout(() => toast.remove(), type === 'error' ? 6000 : 3500);
+    }
+
     searchNotes(query) {
         if (!query.trim()) {
             this.displayNotes();
@@ -739,6 +750,12 @@ class NoteApp {
             this.autoSaveTimer = null;
             this.pendingSaveNote = null;
         }
+    }
+
+    // Save pending edits now and wait for every save, so the server holds what the editor shows
+    async settleSaves() {
+        await this.flushAutoSave();
+        await this.saveQueue;
     }
 
     saveNotes(note = this.currentNote) {

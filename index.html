@@ -33,6 +33,24 @@
             <div class="sidebar-search">
                 <input type="text" placeholder="Search notes..." id="searchInput">
             </div>
+
+            <div class="sidebar-tools">
+                <button type="button" class="sidebar-tool-btn" id="importNotesBtn" title="Import Markdown, text or ZIP files">
+                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                        <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                    </svg>
+                    Import
+                </button>
+                <button type="button" class="sidebar-tool-btn" id="exportAllBtn" title="Download every note as Markdown files in a ZIP">
+                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                        <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                    </svg>
+                    Export all
+                </button>
+                <input type="file" id="importFileInput" accept=".md,.markdown,.txt,.zip" multiple hidden>
+            </div>
             
             <div class="sidebar-nav">
                 <ul class="nav-list">
@@ -184,6 +202,25 @@
                                     <div class="editor-actions">
                     <button class="btn-primary" id="saveNote" title="Save and return to welcome page">
                         Save
+                    </button>
+                    <div class="dropdown" id="exportDropdown">
+                        <button type="button" class="btn-secondary" id="exportNoteBtn" title="Export note" aria-label="Export note" aria-haspopup="menu" aria-expanded="false">
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                                <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                            </svg>
+                        </button>
+                        <div class="dropdown-menu" id="exportMenu" role="menu" hidden>
+                            <button type="button" role="menuitem" data-export="md">Markdown (.md)</button>
+                            <button type="button" role="menuitem" data-export="pdf">PDF (print dialog)</button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-secondary" id="historyBtn" title="Version history" aria-label="Version history">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                            <path d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022l-.074.997zm2.004.45a7.003 7.003 0 0 0-.985-.299l.219-.976c.383.086.76.2 1.126.342l-.36.933zm1.37.71a7.01 7.01 0 0 0-.439-.27l.493-.87a8.025 8.025 0 0 1 .979.654l-.615.789a6.996 6.996 0 0 0-.418-.302zm1.834 1.79a6.99 6.99 0 0 0-.653-.796l.724-.69c.27.285.52.59.747.91l-.818.576zm.744 1.352a7.08 7.08 0 0 0-.214-.468l.893-.45a7.976 7.976 0 0 1 .45 1.088l-.95.313a7.023 7.023 0 0 0-.179-.483zm.53 2.507a6.991 6.991 0 0 0-.1-1.025l.985-.17c.067.386.106.778.116 1.17l-1 .025zm-.131 1.538c.033-.17.06-.339.081-.51l.993.123a7.957 7.957 0 0 1-.23 1.155l-.964-.267c.046-.165.086-.332.12-.501zm-.952 2.379c.184-.29.346-.594.486-.908l.914.405c-.16.36-.345.706-.555 1.038l-.845-.535zm-.964 1.205c.122-.122.239-.248.35-.378l.758.653a8.073 8.073 0 0 1-.401.432l-.707-.707z"/>
+                            <path d="M8 1a7 7 0 1 0 4.95 11.95l.707.707A8.001 8.001 0 1 1 8 0v1z"/>
+                            <path d="M7.5 3a.5.5 0 0 1 .5.5v5.21l3.248 1.856a.5.5 0 0 1-.496.868l-3.5-2A.5.5 0 0 1 7 9V3.5a.5.5 0 0 1 .5-.5z"/>
+                        </svg>
                     </button>
                     <button class="btn-secondary" id="starNote">
                         <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
@@ -538,6 +575,34 @@
         </main>
     </div>
 
+    <!-- Version History Modal -->
+    <div class="modal-overlay" id="historyModal" style="display: none;">
+        <div class="credential-form-modal history-modal" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
+            <div class="modal-header">
+                <h3 id="historyTitle">Version history</h3>
+                <button type="button" class="modal-close" id="historyClose" aria-label="Close">×</button>
+            </div>
+            <div class="history-commit">
+                <input type="text" id="commitMessage" maxlength="200" placeholder="Commit message, e.g. Add deployment steps" aria-label="Commit message">
+                <button type="button" class="btn-primary" id="commitBtn">Commit</button>
+            </div>
+            <div class="history-body">
+                <ul class="history-list" id="historyList"></ul>
+                <div class="history-detail">
+                    <div class="history-detail-header">
+                        <div class="history-tabs" role="tablist">
+                            <button type="button" role="tab" aria-selected="true" class="active" data-history-view="diff">Changes</button>
+                            <button type="button" role="tab" aria-selected="false" data-history-view="content">Content</button>
+                        </div>
+                        <button type="button" class="btn-secondary" id="restoreVersionBtn" disabled>Restore this version</button>
+                    </div>
+                    <p class="history-legend" id="historyLegend"></p>
+                    <div class="history-view" id="historyView"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Credential Form Modal -->
     <div class="modal-overlay" id="credentialModal" style="display: none;">
         <div class="credential-form-modal">
@@ -616,9 +681,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/5.1.1/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.2.0/diff.min.js"></script>
     <script src="frontend/js/api-config.js"></script>
     <script src="frontend/js/app.js"></script>
     <script src="frontend/js/editor.js"></script>
     <script src="frontend/js/templates.js"></script>
+    <script src="frontend/js/note-io.js"></script>
+    <script src="frontend/js/history.js"></script>
 </body>
 </html>

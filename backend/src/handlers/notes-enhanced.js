@@ -1,6 +1,7 @@
 // Enhanced Notes CRUD handlers for Cloudflare Workers
 import { corsHeaders } from '../utils/cors';
 import { Validator, ActivityLogger, createErrorResponse, createSuccessResponse } from '../utils/security';
+import { snapshotBeforeUpdate } from './versions';
 
 export class NotesEnhancedHandler {
     static async list(request, env) {
@@ -376,11 +377,21 @@ export class NotesEnhancedHandler {
             
             // Check if note exists and belongs to user
             const existingNote = await env.DB.prepare(`
-                SELECT id FROM notes WHERE id = ? AND user_id = ? AND deleted_at IS NULL
+                SELECT id, title, content FROM notes WHERE id = ? AND user_id = ? AND deleted_at IS NULL
             `).bind(noteId, user.id).first();
             
             if (!existingNote) {
                 return createErrorResponse('Note not found', 404, 'NOTE_NOT_FOUND');
+            }
+
+            // Keep the state being overwritten in version history; history must never block a save
+            try {
+                await snapshotBeforeUpdate(env, existingNote, user.id, {
+                    title: title !== undefined ? Validator.sanitizeString(title, 200) : undefined,
+                    content: typeof content === 'string' ? content : undefined
+                });
+            } catch (historyError) {
+                console.error('Version snapshot error:', historyError);
             }
             
             // Build update query dynamically
