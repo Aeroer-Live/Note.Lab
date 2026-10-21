@@ -1705,3 +1705,243 @@
     opacity: 0.6;
     cursor: progress;
 }
+
+/* Tags */
+.note-tags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    border-bottom: 1px solid var(--border-default);
+    background-color: var(--bg-secondary);
+    color: var(--text-muted);
+}
+
+.tag-list {
+    display: contents;
+    list-style: none;
+}
+
+.tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 4px 2px 10px;
+    border-radius: 12px;
+    background: rgba(47, 129, 247, 0.15);
+    border: 1px solid rgba(47, 129, 247, 0.4);
+    color: #79c0ff;
+    font-size: 12px;
+    line-height: 18px;
+    max-width: 240px;
+}
+
+.tag-chip span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tag-remove {
+    width: 18px;
+    height: 18px;
+    border: none;
+    border-radius: 50%;
+    background: none;
+    color: inherit;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.tag-remove:hover,
+.tag-remove:focus-visible {
+    background: rgba(47, 129, 247, 0.3);
+}
+
+.tag-input {
+    flex: 1;
+    min-width: 120px;
+    padding: 2px var(--space-1);
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 13px;
+}
+
+.tag-input:focus {
+    outline: none;
+}
+
+.tag-input:disabled {
+    cursor: not-allowed;
+}
+
+.note-item-meta {
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.note-item-time {
+    margin-right: auto;
+}
+
+.note-item-tag {
+    padding: 0 6px;
+    border-radius: 10px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-default);
+    color: var(--text-secondary);
+    font-size: 11px;
+    max-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sidebar-tags {
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--border-default);
+}
+
+.sidebar-tags[hidden] {
+    display: none;
+}
+
+.sidebar-tags-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-2);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
+}
+
+.sidebar-tags-clear {
+    background: none;
+    border: none;
+    color: var(--accent-secondary);
+    font-size: 12px;
+    text-transform: none;
+    letter-spacing: 0;
+    cursor: pointer;
+}
+
+.sidebar-tags-clear[hidden] {
+    display: none;
+}
+
+.sidebar-tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.sidebar-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-default);
+    color: var(--text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+    max-width: 100%;
+}
+
+.sidebar-tag:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+}
+
+.sidebar-tag.active {
+    background: rgba(47, 129, 247, 0.2);
+    border-color: var(--accent-secondary);
+    color: #79c0ff;
+}
+
+.sidebar-tag-count {
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+/* Code blocks: copy button */
+.code-block {
+    position: relative;
+}
+
+.code-copy-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    padding: 2px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-default);
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    font-family: var(--font-ui);
+    font-size: 12px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.code-block:hover .code-copy-btn,
+.code-copy-btn:focus-visible,
+.code-copy-btn.copied {
+    opacity: 1;
+}
+
+.code-copy-btn:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+}
+
+.code-copy-btn.copied {
+    color: #3fb950;
+    border-color: var(--accent-primary);
+}
+
+/* Touch screens have no hover: keep the button visible */
+@media (hover: none) {
+    .code-copy-btn {
+        opacity: 1;
+    }
+}
+
+/* Mermaid diagrams */
+.mermaid-diagram {
+    margin: 0 0 var(--space-4);
+    padding: var(--space-3);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--bg-secondary);
+    text-align: center;
+    overflow-x: auto;
+}
+
+.mermaid-diagram svg {
+    max-width: 100%;
+    height: auto;
+}
+
+.mermaid-diagram.pending {
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.mermaid-diagram.error {
+    text-align: left;
+    color: #f85149;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    white-space: pre-wrap;
+}
