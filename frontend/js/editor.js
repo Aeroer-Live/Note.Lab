@@ -426,7 +426,11 @@ class NoteEditor {
         } else {
             try {
                 const html = marked.parse(content);
-                previewContent.innerHTML = html;
+                // Sanitize rendered markdown to prevent XSS; refuse to render if DOMPurify failed to load
+                if (!window.DOMPurify) {
+                    throw new Error('DOMPurify not loaded');
+                }
+                previewContent.innerHTML = DOMPurify.sanitize(html);
                 
                 // Highlight code blocks if Prism is available
                 if (window.Prism) {

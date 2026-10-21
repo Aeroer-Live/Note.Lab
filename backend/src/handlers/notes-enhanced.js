@@ -255,7 +255,8 @@ export class NotesEnhancedHandler {
             
             // Sanitize input
             const sanitizedTitle = Validator.sanitizeString(title, 200);
-            const sanitizedContent = Validator.sanitizeHTML(content || '');
+            // Content is markdown and is stored verbatim; HTML is sanitized when rendered client-side
+            const sanitizedContent = typeof content === 'string' ? content : '';
             const sanitizedTags = Array.isArray(tags) ? tags.slice(0, 10).map(tag => Validator.sanitizeString(tag, 50)) : [];
             
             const noteId = crypto.randomUUID();
@@ -393,7 +394,7 @@ export class NotesEnhancedHandler {
             
             if (content !== undefined) {
                 updates.push('content = ?');
-                params.push(Validator.sanitizeHTML(content));
+                params.push(typeof content === 'string' ? content : '');
             }
             
             if (type !== undefined) {

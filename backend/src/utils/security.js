@@ -129,15 +129,6 @@ export class Validator {
         if (typeof str !== 'string') return '';
         return str.trim().substring(0, maxLength);
     }
-    
-    static sanitizeHTML(html) {
-        // Basic HTML sanitization - remove script tags and dangerous attributes
-        return html
-            .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-            .replace(/on\w+\s*=/gi, '')
-            .replace(/javascript:/gi, '')
-            .replace(/data:/gi, '');
-    }
 }
 
 // Activity logging utility
