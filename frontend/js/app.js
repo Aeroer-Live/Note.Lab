@@ -344,21 +344,14 @@ class NoteApp {
     
     deleteCurrentNote() {
         if (!this.currentNote) return;
-        
-        if (confirm('Are you sure you want to delete this note?')) {
-            this.notes = this.notes.filter(note => note.id !== this.currentNote.id);
-            this.currentNote = null;
-            
-            this.saveNotes();
-            this.displayNotes();
-            this.showWelcomeOrEditor();
-        }
+
+        this.deleteNoteFromList(this.currentNote.id);
     }
-    
+
     async deleteNoteFromList(noteId) {
         const note = this.notes.find(n => n.id === noteId);
         if (!note) return;
-        
+
         if (confirm(`Are you sure you want to delete "${note.title}"?`)) {
             try {
                 if (!window.api) {
@@ -366,24 +359,35 @@ class NoteApp {
                     return;
                 }
 
-                const response = await window.api.deleteNote(noteId);
-                if (response.success) {
-                    // Remove from notes array
-                    this.notes = this.notes.filter(n => n.id !== noteId);
-                    
-                    // If this was the currently selected note, clear selection
-                    if (this.currentNote && this.currentNote.id === noteId) {
-                        this.currentNote = null;
-                        this.showWelcomeOrEditor();
+                // Drop its pending auto-save and wait for in-flight saves, so a create
+                // still running can't recreate the note after it is deleted
+                this.cancelAutoSave(note);
+                await this.saveQueue;
+
+                // A note that never reached the server only needs removing locally
+                if (!note.id.startsWith('temp_')) {
+                    const response = await window.api.deleteNote(note.id);
+                    if (!response.success) {
+                        console.error('Failed to delete note:', response.message);
+                        this.showSaveStatus('Delete failed: ' + (response.message || 'Unknown error'), 'error');
+                        return;
                     }
-                    
-                    // Update display
-                    this.displayNotes();
-                } else {
-                    console.error('Failed to delete note:', response.message);
                 }
+
+                // Remove from notes array
+                this.notes = this.notes.filter(n => n !== note);
+
+                // If this was the currently selected note, clear selection
+                if (this.currentNote === note) {
+                    this.currentNote = null;
+                    this.showWelcomeOrEditor();
+                }
+
+                // Update display
+                this.displayNotes();
             } catch (error) {
                 console.error('Failed to delete note:', error);
+                this.showSaveStatus('Delete failed: ' + error.message, 'error');
             }
         }
     }
@@ -790,9 +794,6 @@ class NoteApp {
                 // Keep the same object (currentNote may reference it) and only take server
                 // fields: content typed while this request was in flight must not be overwritten
                 note.updatedAt = saved.updatedAt;
-                if (!this.notes.includes(note)) {
-                    this.notes.push(note);
-                }
 
                 this.updateNoteInList(note);
                 this.showSaveStatus('Saved successfully', 'success');
