@@ -1670,3 +1670,38 @@
         padding: var(--space-2) var(--space-3);
     }
 }
+
+
+/* Vault (encrypted credentials notes) */
+.vault-modal {
+    max-width: 460px;
+}
+
+.vault-intro {
+    margin: 0 0 var(--space-4);
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.vault-warning {
+    margin: 0 0 var(--space-4);
+    padding: var(--space-3);
+    border: 1px solid #9e6a03;
+    border-radius: var(--radius-md);
+    background: rgba(187, 128, 9, 0.15);
+    color: #e3b341;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.vault-error {
+    margin: 0;
+    color: #f85149;
+    font-size: 13px;
+}
+
+.vault-modal .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: progress;
+}

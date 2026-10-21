@@ -117,6 +117,18 @@ class APIConfig {
     }
 
     // User profile methods
+    // Vault (client-side encryption settings; never contains the passphrase or key)
+    async getVault() {
+        return this.request('/user/vault');
+    }
+
+    async setVault(vault, previousWrappedKey = null) {
+        return this.request('/user/vault', {
+            method: 'PUT',
+            body: JSON.stringify({ vault, previousWrappedKey })
+        });
+    }
+
     async getProfile() {
         const response = await this.request('/user/profile');
         // The backend returns user data directly, wrap it in success format

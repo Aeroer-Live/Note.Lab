@@ -3,6 +3,17 @@ import { corsHeaders } from '../utils/cors';
 import { Validator, ActivityLogger, createErrorResponse, createSuccessResponse } from '../utils/security';
 import { snapshotBeforeUpdate } from './versions';
 
+// Content of client-side encrypted notes: nlenc:v1:<iv base64>:<ciphertext base64>
+const ENCRYPTED_PREFIX = 'nlenc:v1:';
+
+function isEncryptedMetadata(raw) {
+    try {
+        return JSON.parse(raw || '{}').encrypted === true;
+    } catch {
+        return false;
+    }
+}
+
 export class NotesEnhancedHandler {
     static async list(request, env) {
         try {
@@ -377,21 +388,37 @@ export class NotesEnhancedHandler {
             
             // Check if note exists and belongs to user
             const existingNote = await env.DB.prepare(`
-                SELECT id, title, content FROM notes WHERE id = ? AND user_id = ? AND deleted_at IS NULL
+                SELECT id, title, content, metadata FROM notes WHERE id = ? AND user_id = ? AND deleted_at IS NULL
             `).bind(noteId, user.id).first();
             
             if (!existingNote) {
                 return createErrorResponse('Note not found', 404, 'NOTE_NOT_FOUND');
             }
 
-            // Keep the state being overwritten in version history; history must never block a save
-            try {
-                await snapshotBeforeUpdate(env, existingNote, user.id, {
-                    title: title !== undefined ? Validator.sanitizeString(title, 200) : undefined,
-                    content: typeof content === 'string' ? content : undefined
-                });
-            } catch (historyError) {
-                console.error('Version snapshot error:', historyError);
+            // Encrypted notes (client-side encrypted credentials) never go back to plaintext
+            const wasEncrypted = isEncryptedMetadata(existingNote.metadata);
+            const becomesEncrypted = !wasEncrypted && metadata && metadata.encrypted === true;
+            if (wasEncrypted || becomesEncrypted) {
+                if (typeof content === 'string' && content !== '' && !content.startsWith(ENCRYPTED_PREFIX)) {
+                    return createErrorResponse('This note is encrypted; plaintext content was rejected', 400, 'ENCRYPTION_REQUIRED');
+                }
+                if (becomesEncrypted && typeof content !== 'string') {
+                    return createErrorResponse('Encrypting a note requires its encrypted content', 400, 'ENCRYPTION_REQUIRED');
+                }
+            }
+            const effectiveMetadata = metadata !== undefined && wasEncrypted ? { ...metadata, encrypted: true } : metadata;
+
+            // Keep the state being overwritten in version history; history must never block a save.
+            // Not when a note becomes encrypted: its earlier plaintext states are deleted instead.
+            if (!becomesEncrypted) {
+                try {
+                    await snapshotBeforeUpdate(env, existingNote, user.id, {
+                        title: title !== undefined ? Validator.sanitizeString(title, 200) : undefined,
+                        content: typeof content === 'string' ? content : undefined
+                    });
+                } catch (historyError) {
+                    console.error('Version snapshot error:', historyError);
+                }
             }
             
             // Build update query dynamically
@@ -424,9 +451,9 @@ export class NotesEnhancedHandler {
                 params.push(starred ? 1 : 0);
             }
             
-            if (metadata !== undefined) {
+            if (effectiveMetadata !== undefined) {
                 updates.push('metadata = ?');
-                params.push(JSON.stringify(metadata));
+                params.push(JSON.stringify(effectiveMetadata));
             }
             
             if (updates.length === 0) {
@@ -439,6 +466,11 @@ export class NotesEnhancedHandler {
             
             const query = `UPDATE notes SET ${updates.join(', ')} WHERE id = ?`;
             await env.DB.prepare(query).bind(...params).run();
+
+            // The note's history holds plaintext copies of what was just encrypted
+            if (becomesEncrypted) {
+                await env.DB.prepare(`DELETE FROM note_versions WHERE note_id = ?`).bind(noteId).run();
+            }
             
             // Fetch updated note
             const updatedNote = await env.DB.prepare(`

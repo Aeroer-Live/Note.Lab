@@ -1,6 +1,6 @@
 // Authentication handlers for Cloudflare Workers
 import { corsHeaders } from '../utils/cors';
-import { generateToken } from '../middleware/auth';
+import { generateToken, revokeTokensIssuedBefore } from '../middleware/auth';
 import { EmailService } from '../utils/email-service';
 import { EmailTemplates } from '../utils/email-templates';
 import { PasswordHasher, SessionManager, Validator, ActivityLogger, createErrorResponse, createSuccessResponse } from '../utils/security';
@@ -155,10 +155,16 @@ export class AuthHandler {
                 return createErrorResponse('Email or password is incorrect', 401, 'INVALID_CREDENTIALS');
             }
             
-            // Update last login
-            await env.DB.prepare(
-                'UPDATE users SET last_login_at = ? WHERE id = ?'
-            ).bind(new Date().toISOString(), user.id).run();
+            // Update last login, moving hashes from the old scheme to PBKDF2 while the password is at hand
+            if (PasswordHasher.needsRehash(user.password_hash)) {
+                await env.DB.prepare(
+                    'UPDATE users SET last_login_at = ?, password_hash = ? WHERE id = ?'
+                ).bind(new Date().toISOString(), await PasswordHasher.hashPassword(password), user.id).run();
+            } else {
+                await env.DB.prepare(
+                    'UPDATE users SET last_login_at = ? WHERE id = ?'
+                ).bind(new Date().toISOString(), user.id).run();
+            }
             
             // Create user response object
             const userResponse = {
@@ -478,16 +484,20 @@ export class AuthHandler {
                 });
             }
             
+            // Delete the reset token first, so it cannot be used twice
+            await env.SESSIONS.delete(`reset_${token}`);
+            
             // Hash new password
-            const hashedPassword = await hashPassword(password);
+            const hashedPassword = await PasswordHasher.hashPassword(password);
             
             // Update user password
             await env.DB.prepare(
                 'UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?'
             ).bind(hashedPassword, new Date().toISOString(), resetData.userId).run();
             
-            // Delete the reset token
-            await env.SESSIONS.delete(`reset_${token}`);
+            // Sign out everywhere: whoever knew the old password may hold a valid token
+            await revokeTokensIssuedBefore(env, resetData.userId, Math.floor(Date.now() / 1000));
+            await SessionManager.invalidateAllUserSessions(env, resetData.userId);
             
             // Send password reset success email
             try {

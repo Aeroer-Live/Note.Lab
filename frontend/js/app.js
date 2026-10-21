@@ -15,6 +15,15 @@ class NoteApp {
     }
     
     init() {
+        if (window.vault) {
+            window.vault.onUnlock(async () => {
+                await this.decryptLockedNotes();
+                this.encryptPlaintextCredentials().catch(error => {
+                    console.error('Encrypting existing credentials notes failed:', error);
+                    this.showToast('Could not encrypt existing credentials notes: ' + error.message, 'error');
+                });
+            });
+        }
         this.checkAuthentication();
     }
     
@@ -183,6 +192,14 @@ class NoteApp {
     }
 
     createNoteFromTemplate(templateType) {
+        // Credentials notes are encrypted, so they need an unlocked vault before they exist
+        if (templateType === 'credentials' && window.vault && !window.vault.isUnlocked()) {
+            window.vault.ensureUnlocked().then(unlocked => {
+                if (unlocked) this.createNoteFromTemplate(templateType);
+            });
+            return;
+        }
+
         const templates = this.getTemplateContent();
         const template = templates[templateType] || templates.blank;
         
@@ -242,6 +259,18 @@ class NoteApp {
     }
     
     selectNote(note) {
+        if (this.requiresVault(note) && window.vault && !window.vault.isUnlocked()) {
+            window.vault.ensureUnlocked().then(unlocked => {
+                if (unlocked) this.selectNote(note);
+            });
+            return;
+        }
+        if (note.locked) {
+            // Unlocked, but this note could not be decrypted: never open (and save over) it empty
+            this.showToast('This note could not be decrypted with your vault key', 'error');
+            return;
+        }
+
         this.currentNote = note;
         this.showEditor();
         this.updateNoteEditor();
@@ -304,7 +333,7 @@ class NoteApp {
         const noteElement = document.querySelector(`.note-item[data-note-id="${note.id}"]`);
         if (noteElement) {
             noteElement.querySelector('.note-item-title').textContent = note.title;
-            noteElement.querySelector('.note-item-preview').textContent = this.getPreviewText(note.content);
+            noteElement.querySelector('.note-item-preview').textContent = this.getNotePreview(note);
 
             const timeElement = noteElement.querySelector('.note-item-time');
             if (timeElement) {
@@ -598,7 +627,7 @@ class NoteApp {
                 <div class="note-item" data-note-id="${note.id}">
                     <div class="note-item-content">
                         <div class="note-item-title">${this.escapeHtml(note.title)}</div>
-                        <div class="note-item-preview">${this.escapeHtml(this.getPreviewText(note.content))}</div>
+                        <div class="note-item-preview">${this.escapeHtml(this.getNotePreview(note))}</div>
                         <div class="note-item-meta">
                             <span class="note-item-time">${this.formatTime(note.updatedAt)}</span>
                             ${note.starred ? '<span class="note-starred">★</span>' : ''}
@@ -645,6 +674,10 @@ class NoteApp {
         this.displayNotesByCategory(notes);
     }
     
+    getNotePreview(note) {
+        return note.locked ? '🔒 Encrypted. Unlock your vault to view.' : this.getPreviewText(note.content);
+    }
+
     getPreviewText(content) {
         return content
             .replace(/[#*`]/g, '') // Remove markdown symbols
@@ -752,6 +785,81 @@ class NoteApp {
         }
     }
 
+    // Credentials notes, and anything already encrypted, are stored encrypted
+    requiresVault(note) {
+        return Boolean(note && (note.locked || note.type === 'credentials' || (note.metadata && note.metadata.encrypted)));
+    }
+
+    // Note object for the app from a server note; encrypted content waits in `ciphertext`
+    fromServerNote(note) {
+        const local = {
+            id: note.id,
+            title: note.title,
+            content: note.content,
+            type: note.type,
+            starred: note.starred,
+            tags: note.tags,
+            metadata: note.metadata,
+            createdAt: note.createdAt,
+            updatedAt: note.updatedAt
+        };
+        if ((note.metadata && note.metadata.encrypted) || Vault.isEncrypted(note.content)) {
+            local.ciphertext = note.content;
+            local.content = '';
+            local.locked = true;
+        }
+        return local;
+    }
+
+    async decryptLockedNotes() {
+        for (const note of this.notes) {
+            if (!note.locked) continue;
+            try {
+                note.content = await window.vault.decrypt(note.ciphertext);
+                note.locked = false;
+                delete note.ciphertext;
+            } catch (error) {
+                console.error('Could not decrypt note', note.id, error);
+            }
+        }
+        this.displayNotes();
+    }
+
+    // Encrypts credentials notes saved before the vault existed, including ones beyond
+    // the notes loaded in the sidebar
+    async encryptPlaintextCredentials() {
+        await this.settleSaves();
+
+        const loaded = new Set(this.notes.map(note => note.id));
+        let count = 0;
+
+        for (const note of this.notes) {
+            if (note.type === 'credentials' && !note.locked && !(note.metadata && note.metadata.encrypted) &&
+                note.id && !note.id.startsWith('temp_')) {
+                await this.saveNotes(note);
+                if (note.metadata && note.metadata.encrypted) count++;
+            }
+        }
+
+        if (window.noteIO) {
+            for (const note of await window.noteIO.fetchAllNotes()) {
+                if (loaded.has(note.id) || note.type !== 'credentials' ||
+                    (note.metadata && note.metadata.encrypted) || Vault.isEncrypted(note.content)) {
+                    continue;
+                }
+                await window.api.updateNote(note.id, {
+                    content: await window.vault.encrypt(note.content),
+                    metadata: { ...(note.metadata || {}), encrypted: true }
+                });
+                count++;
+            }
+        }
+
+        if (count) {
+            this.showToast(`Encrypted ${count} existing credentials note${count === 1 ? '' : 's'}`);
+        }
+    }
+
     // Save pending edits now and wait for every save, so the server holds what the editor shows
     async settleSaves() {
         await this.flushAutoSave();
@@ -775,6 +883,9 @@ class NoteApp {
                 return;
             }
 
+            // Still holds ciphertext we could not decrypt: saving would overwrite it
+            if (note.locked) return;
+
             const noteData = {
                 title: note.title,
                 content: note.content,
@@ -783,6 +894,16 @@ class NoteApp {
                 tags: note.tags || [],
                 metadata: note.metadata || {}
             };
+
+            const encrypt = this.requiresVault(note);
+            if (encrypt) {
+                if (!window.vault || !window.vault.isUnlocked()) {
+                    this.showSaveStatus('Not saved: unlock your vault to save credentials notes', 'error');
+                    return;
+                }
+                noteData.content = await window.vault.encrypt(note.content);
+                noteData.metadata = { ...noteData.metadata, encrypted: true };
+            }
 
             const isNew = !note.id || note.id.startsWith('temp_');
             const response = isNew
@@ -811,6 +932,9 @@ class NoteApp {
                 // Keep the same object (currentNote may reference it) and only take server
                 // fields: content typed while this request was in flight must not be overwritten
                 note.updatedAt = saved.updatedAt;
+                if (encrypt) {
+                    note.metadata = { ...(note.metadata || {}), encrypted: true };
+                }
 
                 this.updateNoteInList(note);
                 this.showSaveStatus('Saved successfully', 'success');
@@ -849,17 +973,10 @@ class NoteApp {
 
             const response = await window.api.getNotes();
             if (response.success) {
-                this.notes = response.data.notes.map(note => ({
-                    id: note.id,
-                    title: note.title,
-                    content: note.content,
-                    type: note.type,
-                    starred: note.starred,
-                    tags: note.tags,
-                    metadata: note.metadata,
-                    createdAt: note.createdAt,
-                    updatedAt: note.updatedAt
-                }));
+                this.notes = response.data.notes.map(note => this.fromServerNote(note));
+                if (window.vault && window.vault.isUnlocked()) {
+                    await this.decryptLockedNotes();
+                }
                 console.log(`Loaded ${this.notes.length} notes from server`);
             } else {
                 console.error('Failed to load notes:', response.message);

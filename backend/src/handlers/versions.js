@@ -24,7 +24,7 @@ function formatVersion(version, includeContent = false) {
 
 async function getOwnedNote(env, noteId, userId) {
     return env.DB.prepare(`
-        SELECT id, title, content FROM notes WHERE id = ? AND user_id = ? AND deleted_at IS NULL
+        SELECT id, title, content, metadata FROM notes WHERE id = ? AND user_id = ? AND deleted_at IS NULL
     `).bind(noteId, userId).first();
 }
 
@@ -207,6 +207,13 @@ export class VersionsHandler {
 
             if (!version) {
                 return createErrorResponse('Version not found', 404, 'VERSION_NOT_FOUND');
+            }
+
+            // An encrypted note must never be restored to plaintext content
+            let encrypted = false;
+            try { encrypted = JSON.parse(note.metadata || '{}').encrypted === true; } catch { /* not encrypted */ }
+            if (encrypted && version.content && !version.content.startsWith('nlenc:v1:')) {
+                return createErrorResponse('This version is not encrypted and cannot be restored into an encrypted note', 400, 'ENCRYPTION_REQUIRED');
             }
 
             // Keep the state being replaced, so a restore can itself be undone

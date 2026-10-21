@@ -1,108 +1,105 @@
 // Enhanced security utilities for Note.Lab
 import { corsHeaders } from './cors';
 
-// Password hashing with proper salt
-export class PasswordHasher {
-    static async hashPassword(password) {
-        // Generate a random salt
-        const salt = crypto.getRandomValues(new Uint8Array(16));
-        const encoder = new TextEncoder();
-        
-        // Combine password and salt
-        const passwordWithSalt = encoder.encode(password);
-        const combined = new Uint8Array(salt.length + passwordWithSalt.length);
-        combined.set(salt);
-        combined.set(passwordWithSalt, salt.length);
-        
-        // Hash the combined data
-        const hash = await crypto.subtle.digest('SHA-256', combined);
-        
-        // Convert to hex strings
-        const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
-        const hashHex = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
-        
-        // Return salt:hash format
-        return `${saltHex}:${hashHex}`;
+const toHex = bytes => Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+const fromHex = hex => new Uint8Array(hex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+
+// Constant-time comparison, so response timing does not reveal how much of a hash matched
+function timingSafeEqual(a, b) {
+    if (a.length !== b.length) return false;
+    let diff = 0;
+    for (let i = 0; i < a.length; i++) {
+        diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
     }
-    
+    return diff === 0;
+}
+
+// Password hashing: PBKDF2-SHA256, stored as pbkdf2$<iterations>$<salt hex>$<hash hex>.
+// Hashes from the old single-round SHA-256 scheme (<salt hex>:<hash hex>) still verify,
+// and login upgrades them.
+export class PasswordHasher {
+    // The Workers runtime caps PBKDF2 at 100,000 iterations
+    static ITERATIONS = 100000;
+
+    static async pbkdf2(password, salt, iterations) {
+        const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
+        const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations }, key, 256);
+        return toHex(new Uint8Array(bits));
+    }
+
+    static async hashPassword(password) {
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        const iterations = PasswordHasher.ITERATIONS;
+        const hash = await PasswordHasher.pbkdf2(password, salt, iterations);
+        return `pbkdf2$${iterations}$${toHex(salt)}$${hash}`;
+    }
+
     static async verifyPassword(password, hashedPassword) {
         try {
+            if (typeof hashedPassword !== 'string') return false;
+
+            if (hashedPassword.startsWith('pbkdf2$')) {
+                const [, iterations, saltHex, hashHex] = hashedPassword.split('$');
+                if (!iterations || !saltHex || !hashHex) return false;
+                const computed = await PasswordHasher.pbkdf2(password, fromHex(saltHex), parseInt(iterations, 10));
+                return timingSafeEqual(computed, hashHex);
+            }
+
+            // Legacy: SHA-256(salt || password)
             const [saltHex, hashHex] = hashedPassword.split(':');
             if (!saltHex || !hashHex) return false;
-            
-            // Convert hex strings back to Uint8Array
-            const salt = new Uint8Array(saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-            const encoder = new TextEncoder();
-            
-            // Combine password and salt
-            const passwordWithSalt = encoder.encode(password);
-            const combined = new Uint8Array(salt.length + passwordWithSalt.length);
+            const salt = fromHex(saltHex);
+            const passwordBytes = new TextEncoder().encode(password);
+            const combined = new Uint8Array(salt.length + passwordBytes.length);
             combined.set(salt);
-            combined.set(passwordWithSalt, salt.length);
-            
-            // Hash the combined data
+            combined.set(passwordBytes, salt.length);
             const hash = await crypto.subtle.digest('SHA-256', combined);
-            const computedHashHex = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
-            
-            return computedHashHex === hashHex;
+            return timingSafeEqual(toHex(new Uint8Array(hash)), hashHex);
         } catch (error) {
             console.error('Password verification error:', error);
             return false;
         }
     }
+
+    static needsRehash(hashedPassword) {
+        return !hashedPassword.startsWith(`pbkdf2$${PasswordHasher.ITERATIONS}$`);
+    }
 }
 
-// Rate limiting utility
+// Fixed-window rate limiter: one upsert per request on a row keyed by
+// identifier, bucket and window, so counts accumulate within each window
 export class RateLimiter {
-    static async checkRateLimit(env, identifier, endpoint, limit = 100, windowMinutes = 15) {
-        const now = new Date();
-        const windowStart = new Date(now.getTime() - (windowMinutes * 60 * 1000));
-        
-        // Clean up old records first
-        await env.DB.prepare(`
-            DELETE FROM rate_limits 
-            WHERE window_start < ?
-        `).bind(windowStart.toISOString()).run();
-        
-        // Check current count
-        const current = await env.DB.prepare(`
-            SELECT request_count 
-            FROM rate_limits 
-            WHERE identifier = ? AND endpoint = ? AND window_start >= ?
-        `).bind(identifier, endpoint, windowStart.toISOString()).first();
-        
-        if (current && current.request_count >= limit) {
-            return {
-                allowed: false,
-                remaining: 0,
-                resetTime: new Date(now.getTime() + (windowMinutes * 60 * 1000))
-            };
+    static async checkRateLimit(env, identifier, bucket, limit = 100, windowMinutes = 15) {
+        const windowMs = windowMinutes * 60 * 1000;
+        const now = Date.now();
+        const windowStartMs = Math.floor(now / windowMs) * windowMs;
+        const windowStart = new Date(windowStartMs).toISOString();
+        const resetTime = new Date(windowStartMs + windowMs);
+
+        const row = await env.DB.prepare(`
+            INSERT INTO rate_limits (id, identifier, endpoint, request_count, window_start, created_at)
+            VALUES (?, ?, ?, 1, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET request_count = request_count + 1
+            RETURNING request_count
+        `).bind(
+            `${identifier}|${bucket}|${windowStartMs}`,
+            identifier,
+            bucket,
+            windowStart,
+            new Date(now).toISOString()
+        ).first();
+
+        // Occasionally drop rows from expired windows instead of on every request
+        if (Math.random() < 0.01) {
+            await env.DB.prepare(`DELETE FROM rate_limits WHERE window_start < ?`)
+                .bind(new Date(now - 2 * windowMs).toISOString()).run();
         }
-        
-        // Update or insert rate limit record
-        if (current) {
-            await env.DB.prepare(`
-                UPDATE rate_limits 
-                SET request_count = request_count + 1 
-                WHERE identifier = ? AND endpoint = ? AND window_start >= ?
-            `).bind(identifier, endpoint, windowStart.toISOString()).run();
-        } else {
-            await env.DB.prepare(`
-                INSERT INTO rate_limits (id, identifier, endpoint, request_count, window_start, created_at)
-                VALUES (?, ?, ?, 1, ?, ?)
-            `).bind(
-                crypto.randomUUID(),
-                identifier,
-                endpoint,
-                windowStart.toISOString(),
-                now.toISOString()
-            ).run();
-        }
-        
+
+        const count = row ? row.request_count : 1;
         return {
-            allowed: true,
-            remaining: limit - (current ? current.request_count + 1 : 1),
-            resetTime: new Date(now.getTime() + (windowMinutes * 60 * 1000))
+            allowed: count <= limit,
+            remaining: Math.max(0, limit - count),
+            resetTime
         };
     }
 }

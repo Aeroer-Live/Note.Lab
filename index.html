@@ -575,6 +575,35 @@
         </main>
     </div>
 
+    <!-- Vault Modal (encryption passphrase for credentials notes) -->
+    <div class="modal-overlay" id="vaultModal" style="display: none;">
+        <div class="credential-form-modal vault-modal" role="dialog" aria-modal="true" aria-labelledby="vaultTitle">
+            <div class="modal-header">
+                <h3 id="vaultTitle">Unlock your vault</h3>
+                <button type="button" class="modal-close" id="vaultClose" aria-label="Close">×</button>
+            </div>
+            <div class="modal-body">
+                <p class="vault-intro" id="vaultIntro"></p>
+                <p class="vault-warning" id="vaultWarning" hidden>
+                    If you forget this passphrase, your credentials notes cannot be recovered. It is never sent to the server, so nobody can reset it for you.
+                </p>
+                <div class="form-group">
+                    <label for="vaultPassphrase">Vault passphrase</label>
+                    <input type="password" id="vaultPassphrase" autocomplete="current-password" spellcheck="false">
+                </div>
+                <div class="form-group" id="vaultConfirmGroup" hidden>
+                    <label for="vaultPassphraseConfirm">Repeat passphrase</label>
+                    <input type="password" id="vaultPassphraseConfirm" autocomplete="new-password" spellcheck="false">
+                </div>
+                <p class="vault-error" id="vaultError" role="alert" hidden></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="vaultCancel">Cancel</button>
+                <button type="button" class="btn-primary" id="vaultSubmit">Unlock</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Version History Modal -->
     <div class="modal-overlay" id="historyModal" style="display: none;">
         <div class="credential-form-modal history-modal" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
@@ -684,6 +713,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.2.0/diff.min.js"></script>
     <script src="frontend/js/api-config.js"></script>
+    <script src="frontend/js/vault.js"></script>
     <script src="frontend/js/app.js"></script>
     <script src="frontend/js/editor.js"></script>
     <script src="frontend/js/templates.js"></script>

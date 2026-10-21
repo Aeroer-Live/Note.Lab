@@ -205,6 +205,18 @@ class NoteIO {
                 return;
             }
 
+            // Encrypted notes go out readable when the vault is unlocked, otherwise still
+            // encrypted (they import back into an account with the same vault)
+            let stillEncrypted = 0;
+            for (const note of notes) {
+                if (!Vault.isEncrypted(note.content)) continue;
+                if (window.vault.isUnlocked()) {
+                    note.content = await window.vault.decrypt(note.content);
+                } else {
+                    stillEncrypted++;
+                }
+            }
+
             const zip = new JSZip();
             const used = new Set();
             for (const note of notes) {
@@ -219,7 +231,8 @@ class NoteIO {
             const blob = await zip.generateAsync({ type: 'blob' });
             const date = new Date().toISOString().slice(0, 10);
             this.download(blob, `note-lab-export-${date}.zip`);
-            this.app.showToast(`Exported ${notes.length} note${notes.length === 1 ? '' : 's'}`);
+            this.app.showToast(`Exported ${notes.length} note${notes.length === 1 ? '' : 's'}` +
+                (stillEncrypted ? `; ${stillEncrypted} still encrypted because the vault is locked` : ''));
         } catch (error) {
             console.error('Export failed:', error);
             this.app.showToast('Export failed: ' + error.message, 'error');
@@ -335,9 +348,33 @@ class NoteIO {
             let imported = 0;
             for (const entry of entries) {
                 try {
-                    const response = await window.api.createNote(this.parseMarkdown(entry.text, entry.name));
+                    const data = this.parseMarkdown(entry.text, entry.name);
+
+                    // Credentials notes are only ever uploaded encrypted
+                    if (Vault.isEncrypted(data.content)) {
+                        data.metadata = { encrypted: true };
+                    } else if (data.type === 'credentials') {
+                        if (!await window.vault.ensureUnlocked()) {
+                            failed.push(`${entry.name} (vault locked)`);
+                            continue;
+                        }
+                        data.content = await window.vault.encrypt(data.content);
+                        data.metadata = { encrypted: true };
+                    }
+
+                    const response = await window.api.createNote(data);
                     if (response.success) {
-                        this.app.notes.unshift(response.data.note);
+                        const note = this.app.fromServerNote(response.data.note);
+                        if (note.locked && window.vault.isUnlocked()) {
+                            try {
+                                note.content = await window.vault.decrypt(note.ciphertext);
+                                note.locked = false;
+                                delete note.ciphertext;
+                            } catch {
+                                // Encrypted with a different vault: stays locked
+                            }
+                        }
+                        this.app.notes.unshift(note);
                         imported++;
                     } else {
                         failed.push(entry.name);

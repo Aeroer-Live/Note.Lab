@@ -6,6 +6,7 @@ import { NotesHandler } from './handlers/notes';
 import { NotesEnhancedHandler } from './handlers/notes-enhanced';
 import { CategoriesHandler } from './handlers/categories';
 import { VersionsHandler } from './handlers/versions';
+import { VaultHandler } from './handlers/vault';
 import { verifyToken } from './middleware/auth';
 import { RateLimiter, createRateLimitResponse } from './utils/security';
 
@@ -15,28 +16,34 @@ const router = Router();
 // CORS preflight
 router.options('*', handleCors);
 
-// Public routes
-router.post('/api/auth/register', AuthHandler.register);
-router.post('/api/auth/login', AuthHandler.login);
-router.post('/api/auth/refresh', AuthHandler.refresh);
-router.post('/api/auth/forgot-password', AuthHandler.forgotPassword);
-router.post('/api/auth/reset-password', AuthHandler.resetPassword);
+// Rate limiting middleware: counts requests per client IP in a named bucket
+function rateLimit(bucket, limit, windowMinutes) {
+    return async (request, env) => {
+        const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
 
-// Rate limiting middleware
-async function rateLimitMiddleware(request, env) {
-    const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
-    const endpoint = new URL(request.url).pathname;
-    
-    const rateLimit = await RateLimiter.checkRateLimit(env, clientIP, endpoint, 100, 15);
-    
-    if (!rateLimit.allowed) {
-        return createRateLimitResponse(rateLimit);
-    }
-    
-    // Add rate limit headers to response
-    request.rateLimit = rateLimit;
-    return null;
+        try {
+            const result = await RateLimiter.checkRateLimit(env, clientIP, bucket, limit, windowMinutes);
+            if (!result.allowed) {
+                return createRateLimitResponse(result);
+            }
+            request.rateLimit = result;
+        } catch (error) {
+            // A limiter failure must not take the API down with it
+            console.error('Rate limiter error:', error);
+        }
+        return null;
+    };
 }
+
+// Normal use, shared by all authenticated routes (auto-save sends a request per pause in typing)
+const rateLimitMiddleware = rateLimit('api', 1000, 15);
+
+// Public routes: tight limits slow down password guessing and email spam
+router.post('/api/auth/register', rateLimit('auth:register', 5, 60), AuthHandler.register);
+router.post('/api/auth/login', rateLimit('auth:login', 10, 15), AuthHandler.login);
+router.post('/api/auth/refresh', rateLimit('auth:refresh', 30, 15), AuthHandler.refresh);
+router.post('/api/auth/forgot-password', rateLimit('auth:forgot', 5, 60), AuthHandler.forgotPassword);
+router.post('/api/auth/reset-password', rateLimit('auth:reset', 10, 15), AuthHandler.resetPassword);
 
 // Protected routes (require authentication)
 router.get('/api/notes', rateLimitMiddleware, verifyToken, NotesEnhancedHandler.list);
@@ -67,8 +74,10 @@ router.post('/api/categories/assign', rateLimitMiddleware, verifyToken, Categori
 router.get('/api/notes/:noteId/categories', rateLimitMiddleware, verifyToken, CategoriesHandler.getNoteCategories);
 
 // User profile routes
-router.get('/api/user/profile', verifyToken, AuthHandler.profile);
-router.put('/api/user/profile', verifyToken, AuthHandler.updateProfile);
+router.get('/api/user/profile', rateLimitMiddleware, verifyToken, AuthHandler.profile);
+router.put('/api/user/profile', rateLimitMiddleware, verifyToken, AuthHandler.updateProfile);
+router.get('/api/user/vault', rateLimitMiddleware, verifyToken, VaultHandler.get);
+router.put('/api/user/vault', rateLimitMiddleware, verifyToken, VaultHandler.set);
 
 // Health check
 router.get('/api/health', () => {

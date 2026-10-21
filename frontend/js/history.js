@@ -132,6 +132,11 @@ class NoteHistory {
         `).join('');
     }
 
+    // Versions of encrypted notes are stored encrypted
+    async readable(content) {
+        return Vault.isEncrypted(content) ? window.vault.decrypt(content) : content;
+    }
+
     formatSize(chars) {
         return chars >= 1000 ? `${(chars / 1000).toFixed(1)}k chars` : `${chars} chars`;
     }
@@ -145,7 +150,9 @@ class NoteHistory {
             this.renderDetail('Loading…');
             try {
                 const response = await window.api.getNoteVersion(note.id, versionId);
-                this.cache.set(versionId, response.data.version);
+                const version = response.data.version;
+                version.content = await this.readable(version.content);
+                this.cache.set(versionId, version);
             } catch (error) {
                 if (this.selectedId === versionId) this.renderDetail('Could not load this version: ' + error.message);
                 return;
@@ -296,8 +303,9 @@ class NoteHistory {
             const response = await window.api.restoreNoteVersion(note.id, version.id);
             const restored = response.data.note;
 
+            const content = await this.readable(restored.content);
             note.title = restored.title;
-            note.content = restored.content;
+            note.content = content;
             note.updatedAt = restored.updatedAt;
 
             if (this.app.currentNote === note) {
