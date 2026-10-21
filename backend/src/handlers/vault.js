@@ -83,7 +83,8 @@ export class VaultHandler {
                 WHERE id = ? AND json_extract(COALESCE(preferences, '{}'), '$.vault.wrappedKey') IS ?
             `).bind(JSON.stringify(preferences), request.user.id, current).run();
 
-            if (!result.meta || result.meta.changes !== 1) {
+            // The updated_at trigger also counts as a change, so only zero means the condition failed
+            if (!result.meta || !result.meta.changes) {
                 return createErrorResponse('The vault was changed by another request', 409, 'VAULT_EXISTS');
             }
 
