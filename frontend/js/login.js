@@ -82,7 +82,9 @@ class LoginManager {
         if (passwordField) {
             passwordField.addEventListener('input', () => this.checkPasswordStrength());
             passwordField.addEventListener('focus', () => {
-                document.getElementById('passwordRequirements').style.display = 'block';
+                if (this.currentMode === 'signup') {
+                    document.getElementById('passwordRequirements').style.display = 'block';
+                }
             });
             passwordField.addEventListener('blur', () => {
                 if (!passwordField.value) {
@@ -143,7 +145,18 @@ class LoginManager {
         confirmPasswordGroup.style.display = isSignUp ? 'flex' : 'none';
         rememberGroup.style.display = isSignUp ? 'none' : 'flex';
         
-        // Update button text
+        // Update heading, tab state and button text
+        document.getElementById('authHeading').textContent = isSignUp ? 'Create your account' : 'Welcome back';
+        document.getElementById('authSubheading').textContent = isSignUp
+            ? 'Your notes, synced and searchable.'
+            : 'Sign in to pick up where you left off.';
+        document.querySelectorAll('.auth-tab').forEach(tab => {
+            tab.setAttribute('aria-selected', String(tab.dataset.mode === this.currentMode));
+        });
+        if (!isSignUp) {
+            document.getElementById('passwordStrength').style.display = 'none';
+            document.getElementById('passwordRequirements').style.display = 'none';
+        }
         btnText.textContent = isSignUp ? 'Create Account' : 'Sign In';
         loadingText.textContent = isSignUp ? 'Creating account...' : 'Signing in...';
         
@@ -508,11 +521,12 @@ class LoginManager {
         const strengthFill = document.getElementById('strengthFill');
         const strengthText = document.getElementById('strengthText');
         
-        if (!password) {
+        // Only useful when choosing a password, not when entering an existing one
+        if (!password || this.currentMode !== 'signup') {
             strengthBar.style.display = 'none';
             return;
         }
-        
+
         strengthBar.style.display = 'block';
         
         // Calculate strength based on backend requirements
