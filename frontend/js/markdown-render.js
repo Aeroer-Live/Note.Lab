@@ -144,7 +144,8 @@ class NoteMarkdown {
             button.textContent = 'Copy';
             button.setAttribute('aria-label', 'Copy code');
             button.addEventListener('click', async () => {
-                const copied = await this.copyText(code.textContent);
+                // Markdown leaves a newline after the last line of every code block
+                const copied = await this.copyText(code.textContent.replace(/\n$/, ''));
                 button.textContent = copied ? 'Copied' : 'Copy failed';
                 button.classList.toggle('copied', copied);
                 clearTimeout(button.resetTimer);

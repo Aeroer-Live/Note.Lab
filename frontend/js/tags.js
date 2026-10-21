@@ -124,12 +124,19 @@ class NoteTags {
         for (const note of this.app.notes) {
             for (const tag of note.tags || []) {
                 const key = tag.toLowerCase();
-                const entry = counts.get(key) || { tag, count: 0 };
+                const entry = counts.get(key) || { count: 0, spellings: new Map() };
                 entry.count++;
+                entry.spellings.set(tag, (entry.spellings.get(tag) || 0) + 1);
                 counts.set(key, entry);
             }
         }
-        return [...counts.values()].sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
+        // Tags differing only in case count as one, shown in the spelling most notes use
+        return [...counts.values()]
+            .map(({ count, spellings }) => ({
+                tag: [...spellings].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0],
+                count
+            }))
+            .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
     }
 
     renderSidebar() {
