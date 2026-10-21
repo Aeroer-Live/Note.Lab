@@ -385,7 +385,9 @@ export class AuthHandler {
             });
             
             // Generate reset URL
-            const resetUrl = `${request.url.split('/api')[0]}/forgot-password.html?token=${resetToken}&email=${encodeURIComponent(email)}`;
+            // Link to the frontend (Pages), not the Worker; never derive it from request headers
+            const frontendUrl = env.FRONTEND_URL || request.url.split('/api')[0];
+            const resetUrl = `${frontendUrl}/forgot-password.html?token=${resetToken}&email=${encodeURIComponent(email)}`;
             
             // Send password reset email
             try {
@@ -437,16 +439,12 @@ export class AuthHandler {
                 });
             }
             
-            if (password.length < 6) {
-                return new Response(JSON.stringify({
-                    error: 'Password must be at least 6 characters long'
-                }), {
-                    status: 400,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...corsHeaders
-                    }
-                });
+            if (!Validator.isValidPassword(password)) {
+                return createErrorResponse(
+                    'Password must be at least 8 characters long and contain at least one letter and one number',
+                    400,
+                    'INVALID_PASSWORD'
+                );
             }
             
             // Get reset token data from KV

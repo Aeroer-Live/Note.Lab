@@ -115,7 +115,7 @@ class ForgotPasswordManager {
         this.setLoading('requestBtn', true);
         
         try {
-            const response = await fetch('/api/auth/forgot-password', {
+            const response = await fetch(`${window.api.baseURL}/auth/forgot-password`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -129,7 +129,7 @@ class ForgotPasswordManager {
                 this.requestedEmail = email;
                 this.showSuccessMessage();
             } else {
-                this.showMessage(data.message || 'Failed to send reset email', 'error');
+                this.showMessage(data.message || data.error || 'Failed to send reset email', 'error');
             }
         } catch (error) {
             console.error('Request reset error:', error);
@@ -155,8 +155,9 @@ class ForgotPasswordManager {
             return;
         }
         
-        if (newPassword.length < 6) {
-            this.showMessage('Password must be at least 6 characters long', 'error');
+        // Same rule as registration (Validator.isValidPassword on the backend)
+        if (!/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/.test(newPassword)) {
+            this.showMessage('Password must be at least 8 characters long and contain at least one letter and one number (allowed symbols: @$!%*?&)', 'error');
             return;
         }
         
@@ -168,7 +169,7 @@ class ForgotPasswordManager {
         this.setLoading('resetBtn', true);
         
         try {
-            const response = await fetch('/api/auth/reset-password', {
+            const response = await fetch(`${window.api.baseURL}/auth/reset-password`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -187,7 +188,7 @@ class ForgotPasswordManager {
                     window.location.href = 'login.html';
                 }, 2000);
             } else {
-                this.showMessage(data.message || 'Failed to reset password', 'error');
+                this.showMessage(data.message || data.error || 'Failed to reset password', 'error');
             }
         } catch (error) {
             console.error('Reset password error:', error);
