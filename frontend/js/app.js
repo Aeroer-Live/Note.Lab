@@ -298,17 +298,17 @@ class NoteApp {
         this.updateWordCount();
     }
     
-    updateNoteInList() {
-        if (!this.currentNote) return;
-        
-        const noteElement = document.querySelector(`[data-note-id="${this.currentNote.id}"]`);
+    updateNoteInList(note = this.currentNote) {
+        if (!note) return;
+
+        const noteElement = document.querySelector(`.note-item[data-note-id="${note.id}"]`);
         if (noteElement) {
-            noteElement.querySelector('.note-item-title').textContent = this.currentNote.title;
-            noteElement.querySelector('.note-item-preview').textContent = this.getPreviewText(this.currentNote.content);
-            
+            noteElement.querySelector('.note-item-title').textContent = note.title;
+            noteElement.querySelector('.note-item-preview').textContent = this.getPreviewText(note.content);
+
             const timeElement = noteElement.querySelector('.note-item-time');
             if (timeElement) {
-                timeElement.textContent = this.formatTime(this.currentNote.updatedAt);
+                timeElement.textContent = this.formatTime(note.updatedAt);
             }
         }
     }
@@ -393,9 +393,10 @@ class NoteApp {
         
         // Update the current note with latest content
         this.updateCurrentNoteContent();
-        
-        // Save notes to localStorage
-        this.saveNotes();
+
+        // Save now; a pending auto-save of this note would only repeat it
+        this.cancelAutoSave(this.currentNote);
+        this.saveNotes(this.currentNote);
         
         // Clear current note selection
         this.currentNote = null;
@@ -702,22 +703,51 @@ class NoteApp {
     }
     
     autoSave() {
+        const note = this.currentNote;
+        if (!note) return;
+
+        // Another note still has a pending auto-save: save it now instead of dropping its edits
+        if (this.pendingSaveNote && this.pendingSaveNote !== note) {
+            this.flushAutoSave();
+        }
+
         clearTimeout(this.autoSaveTimer);
-        
+        this.pendingSaveNote = note;
+
         document.getElementById('saveStatus').textContent = 'Saving...';
         document.getElementById('saveStatus').className = 'save-status saving';
-        
-        this.autoSaveTimer = setTimeout(() => {
-            this.saveNotes();
-            document.getElementById('saveStatus').textContent = 'Saved';
-            document.getElementById('saveStatus').className = 'save-status saved';
-        }, 1000);
+
+        this.autoSaveTimer = setTimeout(() => this.flushAutoSave(), 1000);
     }
-    
-    async saveNotes() {
+
+    flushAutoSave() {
+        clearTimeout(this.autoSaveTimer);
+        this.autoSaveTimer = null;
+
+        const note = this.pendingSaveNote;
+        this.pendingSaveNote = null;
+        return note ? this.saveNotes(note) : Promise.resolve();
+    }
+
+    cancelAutoSave(note) {
+        if (this.pendingSaveNote === note) {
+            clearTimeout(this.autoSaveTimer);
+            this.autoSaveTimer = null;
+            this.pendingSaveNote = null;
+        }
+    }
+
+    saveNotes(note = this.currentNote) {
+        if (!note) return Promise.resolve();
+
+        // Saves run one at a time, so a note's create finishes (and it gets its
+        // server ID) before any later save of it runs; otherwise it is created twice
+        this.saveQueue = (this.saveQueue || Promise.resolve()).then(() => this.persistNote(note));
+        return this.saveQueue;
+    }
+
+    async persistNote(note) {
         try {
-            if (!this.currentNote) return;
-            
             if (!window.api) {
                 console.error('API not available');
                 this.showSaveStatus('API not available', 'error');
@@ -725,47 +755,47 @@ class NoteApp {
             }
 
             const noteData = {
-                title: this.currentNote.title,
-                content: this.currentNote.content,
-                type: this.currentNote.type || 'standard',
-                starred: this.currentNote.starred || false,
-                tags: this.currentNote.tags || [],
-                metadata: this.currentNote.metadata || {}
+                title: note.title,
+                content: note.content,
+                type: note.type || 'standard',
+                starred: note.starred || false,
+                tags: note.tags || [],
+                metadata: note.metadata || {}
             };
 
-            let response;
-            if (this.currentNote.id && this.currentNote.id.startsWith('temp_')) {
-                // This is a temporary note, create new
-                response = await window.api.createNote(noteData);
-                if (response.success) {
-                    this.currentNote.id = response.data.note.id;
-                    console.log('Created new note with ID:', this.currentNote.id);
-                }
-            } else if (this.currentNote.id) {
-                // Update existing note
-                response = await window.api.updateNote(this.currentNote.id, noteData);
-                console.log('Updated existing note:', this.currentNote.id);
-            } else {
-                // Create new note
-                response = await window.api.createNote(noteData);
-                if (response.success) {
-                    this.currentNote.id = response.data.note.id;
-                    console.log('Created new note with ID:', this.currentNote.id);
-                }
-            }
+            const isNew = !note.id || note.id.startsWith('temp_');
+            const response = isNew
+                ? await window.api.createNote(noteData)
+                : await window.api.updateNote(note.id, noteData);
 
             if (response.success) {
-                // Update the note in our local array
-                const noteIndex = this.notes.findIndex(n => n.id === this.currentNote.id);
-                if (noteIndex !== -1) {
-                    this.notes[noteIndex] = { ...this.currentNote, ...response.data.note };
+                const saved = response.data.note;
+
+                if (isNew) {
+                    const tempId = note.id;
+                    note.id = saved.id;
+                    note.createdAt = saved.createdAt;
+
+                    // Point list items at the server ID so clicks and deletes still find the note
+                    if (tempId) {
+                        document.querySelectorAll(`[data-note-id="${tempId}"]`).forEach(el => {
+                            el.dataset.noteId = saved.id;
+                        });
+                    }
+                    console.log('Created new note with ID:', note.id);
                 } else {
-                    this.notes.push({ ...this.currentNote, ...response.data.note });
+                    console.log('Updated existing note:', note.id);
                 }
-                
-                this.updateNoteInList();
+
+                // Keep the same object (currentNote may reference it) and only take server
+                // fields: content typed while this request was in flight must not be overwritten
+                note.updatedAt = saved.updatedAt;
+                if (!this.notes.includes(note)) {
+                    this.notes.push(note);
+                }
+
+                this.updateNoteInList(note);
                 this.showSaveStatus('Saved successfully', 'success');
-                console.log('Note saved successfully');
             } else {
                 console.error('Save failed:', response.message);
                 this.showSaveStatus('Save failed: ' + (response.message || 'Unknown error'), 'error');

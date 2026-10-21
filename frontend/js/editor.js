@@ -637,11 +637,9 @@ class NoteEditor {
     
     saveNote() {
         if (window.noteApp) {
+            // Status is shown by NoteApp once the server confirms the save
+            window.noteApp.cancelAutoSave(window.noteApp.currentNote);
             window.noteApp.saveNotes();
-            
-            const saveStatus = document.getElementById('saveStatus');
-            saveStatus.textContent = 'Saved';
-            saveStatus.className = 'save-status saved';
         }
         return false; // Prevent default Ctrl+S behavior
     }
