@@ -171,20 +171,7 @@ class NoteIO {
     }
 
     async fetchAllNotes() {
-        const notes = [];
-        let offset = 0;
-
-        for (;;) {
-            const response = await window.api.getNotes({ limit: 100, offset });
-            if (!response.success) {
-                throw new Error(response.message || 'Failed to load notes');
-            }
-            notes.push(...response.data.notes);
-            if (!response.data.pagination.hasMore || response.data.notes.length === 0) break;
-            offset += response.data.notes.length;
-        }
-
-        return notes;
+        return window.api.getAllNotes();
     }
 
     async exportAll() {

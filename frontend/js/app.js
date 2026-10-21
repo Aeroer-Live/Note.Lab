@@ -563,7 +563,8 @@ class NoteApp {
     }
     
     displayNotes() {
-        let notesToShow = [...this.notes];
+        // Most recently edited first, in every view (edits made here update updatedAt locally)
+        let notesToShow = [...this.notes].sort((a, b) => this.editTime(b) - this.editTime(a));
         
         // Filter by view
         switch (this.currentView) {
@@ -579,6 +580,11 @@ class NoteApp {
         this.displayNotesByCategory(notesToShow);
     }
     
+    editTime(note) {
+        const time = Date.parse(note.updatedAt || note.createdAt || '');
+        return Number.isNaN(time) ? 0 : time;
+    }
+
     displayNotesByCategory(notes) {
         // Group notes by category
         const categorizedNotes = {
@@ -971,22 +977,16 @@ class NoteApp {
                 return;
             }
 
-            const response = await window.api.getNotes();
-            if (response.success) {
-                this.notes = response.data.notes.map(note => this.fromServerNote(note));
-                if (window.vault && window.vault.isUnlocked()) {
-                    await this.decryptLockedNotes();
-                }
-                console.log(`Loaded ${this.notes.length} notes from server`);
-            } else {
-                console.error('Failed to load notes:', response.message);
-                // Don't clear notes array on API error, keep existing notes
-                if (this.notes.length === 0) {
-                    this.notes = [];
-                }
+            // All pages, not just the first: the server returns at most 100 notes per request
+            const notes = await window.api.getAllNotes();
+            this.notes = notes.map(note => this.fromServerNote(note));
+            if (window.vault && window.vault.isUnlocked()) {
+                await this.decryptLockedNotes();
             }
+            console.log(`Loaded ${this.notes.length} notes from server`);
         } catch (error) {
             console.error('Failed to load notes:', error);
+            this.showToast('Could not load notes: ' + error.message, 'error');
             // Don't clear notes array on network error, keep existing notes
             if (this.notes.length === 0) {
                 this.notes = [];

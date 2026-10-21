@@ -152,6 +152,31 @@ class APIConfig {
         return this.request(endpoint);
     }
 
+    // Every note, newest edit first: the list endpoint returns at most 100 per page
+    async getAllNotes() {
+        const notes = [];
+        const seen = new Set();
+        let offset = 0;
+
+        for (;;) {
+            const response = await this.getNotes({ limit: 100, offset });
+            if (!response.success) {
+                throw new Error(response.message || 'Failed to load notes');
+            }
+            for (const note of response.data.notes) {
+                // A note edited mid-way can shift between pages; keep one copy
+                if (!seen.has(note.id)) {
+                    seen.add(note.id);
+                    notes.push(note);
+                }
+            }
+            if (!response.data.pagination.hasMore || response.data.notes.length === 0) break;
+            offset += response.data.notes.length;
+        }
+
+        return notes;
+    }
+
     async getNote(id) {
         return this.request(`/notes/${id}`);
     }
