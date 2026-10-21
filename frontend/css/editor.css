@@ -1387,11 +1387,11 @@
     cursor: progress;
 }
 
-.dropdown {
+.export-dropdown {
     position: relative;
 }
 
-.dropdown-menu {
+.export-menu {
     position: absolute;
     top: calc(100% + 4px);
     right: 0;
@@ -1404,11 +1404,11 @@
     z-index: 1500;
 }
 
-.dropdown-menu[hidden] {
+.export-menu[hidden] {
     display: none;
 }
 
-.dropdown-menu button {
+.export-menu button {
     display: block;
     width: 100%;
     padding: var(--space-2) var(--space-3);
@@ -1421,8 +1421,8 @@
     cursor: pointer;
 }
 
-.dropdown-menu button:hover,
-.dropdown-menu button:focus-visible {
+.export-menu button:hover,
+.export-menu button:focus-visible {
     background: var(--bg-hover);
 }
 
